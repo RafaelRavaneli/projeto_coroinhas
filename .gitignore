@@ -1,0 +1,21 @@
+# Ambiente Virtual
+venv/
+env/
+
+# Banco de Dados e Arquivos Locais (Evita vazar os dados da Paróquia)
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Variáveis de Ambiente
+.env
+
+# Configurações de Editores (VS Code, etc)
+.vscode/

@@ -5,36 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Escalas Geradas</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Configurações para Gerar um PDF limpo e profissional -->
     <style>
         @media print {
-            /* Esconde os menus, botões e filtros na hora de salvar o PDF */
-            .navbar, .btn, form, .esconder-no-pdf { 
-                display: none !important; 
-            }
-            /* Garante que as cores de fundo sejam impressas */
-            * {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
+            .navbar, .btn, form, .esconder-no-pdf, .caixa-whatsapp { display: none !important; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { background-color: white !important; }
-            .card { 
-                border: 1px solid #ddd !important; 
-                box-shadow: none !important; 
-                margin-bottom: 20px !important; 
-                break-inside: avoid; /* Evita cortar a missa no meio da página */
-            }
-            /* Título do documento no PDF */
-            .pdf-titulo::before {
-                content: "Escala Oficial - Paróquia Santo Antônio";
-                display: block;
-                font-size: 24px;
-                font-weight: bold;
-                text-align: center;
-                margin-bottom: 20px;
-                color: black;
-            }
+            .card { border: 1px solid #ddd !important; box-shadow: none !important; margin-bottom: 20px !important; break-inside: avoid; }
+            .pdf-titulo::before { content: "Escala Oficial - Paróquia Santo Antônio"; display: block; font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 20px; color: black; }
         }
     </style>
 </head>
@@ -45,6 +22,7 @@
         <span class="navbar-brand">Paróquia Santo Antônio</span>
         <div class="navbar-nav">
             <a class="nav-link" href="/">Coroinhas</a>
+            <a class="nav-link" href="/ajudantes">Ajudantes</a>
             <a class="nav-link" href="/missas">Missas</a>
             <a class="nav-link active" href="/escalas">Escalas</a>
         </div>
@@ -54,35 +32,34 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3 esconder-no-pdf">
         <h2 class="text-primary m-0">Escalas de Missas</h2>
-        
         <div class="d-flex gap-2">
             <form action="/escala/gerar" method="POST" class="m-0">
                 <button type="submit" class="btn btn-success fw-bold shadow-sm">⚙️ Gerar Pendentes</button>
             </form>
-            <button onclick="window.print()" class="btn btn-dark fw-bold shadow-sm">🖨️ Salvar PDF / Imprimir</button>
+            <button onclick="window.print()" class="btn btn-dark fw-bold shadow-sm">🖨️ Salvar PDF</button>
         </div>
     </div>
 
-    <!-- Filtro de Datas -->
     <form method="GET" action="/escalas" class="row g-2 mb-4 justify-content-center bg-white p-3 rounded shadow-sm border esconder-no-pdf">
-        <div class="col-md-auto d-flex align-items-center">
-            <strong>📅 Filtrar Escalas:</strong>
-        </div>
-        <div class="col-md-3">
-            <input type="date" class="form-control" name="data_inicio" value="{{ data_inicio or '' }}">
-        </div>
-        <div class="col-md-3">
-            <input type="date" class="form-control" name="data_fim" value="{{ data_fim or '' }}">
-        </div>
-        <div class="col-md-2">
-            <button type="submit" class="btn btn-primary w-100">Buscar</button>
-        </div>
-        <div class="col-md-2">
-            <a href="/escalas" class="btn btn-outline-secondary w-100">Limpar</a>
-        </div>
+        <div class="col-md-auto d-flex align-items-center"><strong>📅 Filtrar:</strong></div>
+        <div class="col-md-3"><input type="date" class="form-control" name="data_inicio" value="{{ data_inicio or '' }}"></div>
+        <div class="col-md-3"><input type="date" class="form-control" name="data_fim" value="{{ data_fim or '' }}"></div>
+        <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Buscar</button></div>
+        <div class="col-md-2"><a href="/escalas" class="btn btn-outline-secondary w-100">Limpar</a></div>
     </form>
 
-    <!-- Lista de Missas e Escalas -->
+    <!-- Caixa Geradora de WhatsApp -->
+    <div class="card shadow-sm mb-4 border-success esconder-no-pdf caixa-whatsapp">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">📱 Mensagem para o WhatsApp (Filtro Atual)</h5>
+            <button onclick="copiarTexto()" class="btn btn-light btn-sm fw-bold">Copiar Texto</button>
+        </div>
+        <div class="card-body p-0">
+            <textarea id="textoZap" class="form-control border-0" rows="6" style="resize: none;" readonly>{{ texto_whatsapp }}</textarea>
+        </div>
+    </div>
+
+    <!-- Lista de Escalas -->
     <div class="row">
         {% for missa in missas %}
         <div class="col-md-6 mb-4">
@@ -90,54 +67,52 @@
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <div>
                         <h5 class="mb-0">{{ missa.descricao }}</h5>
-                        <small>{{ missa.data_hora.strftime('%d/%m/%Y às %H:%M') }} | Tipo: {{ missa.tipo_missa }}</small>
+                        <small>{{ missa.data_hora.strftime('%d/%m/%Y às %H:%M') }} | {{ missa.tipo_missa }}</small>
                     </div>
                     {% if missa.escalas %}
-                    <form action="/escala/regerar/{{ missa.id }}" method="POST" onsubmit="return confirm('Isso apagará a escala atual e fará um novo sorteio. Confirmar?');" class="esconder-no-pdf">
-                        <button type="submit" class="btn btn-warning btn-sm fw-bold">Refazer Escala</button>
+                    <form action="/escala/regerar/{{ missa.id }}" method="POST" class="esconder-no-pdf">
+                        <button type="submit" class="btn btn-warning btn-sm fw-bold">Refazer</button>
                     </form>
                     {% endif %}
                 </div>
                 
                 <div class="card-body p-0">
                     {% if missa.escalas %}
-                        <!-- Área do Ajudante -->
                         <div class="bg-light p-3 border-bottom text-center">
-                            <span class="badge bg-success mb-1">Adulto Ajudante Sorteado</span>
-                            <h6 class="m-0 text-dark fw-bold">{{ missa.ajudante_nome }}</h6>
+                            <span class="badge bg-success mb-1">Ajudante (Responsável)</span>
+                            <h6 class="m-0 text-dark fw-bold">{{ missa.ajudante.nome if missa.ajudante else 'EM ABERTO' }}</h6>
                         </div>
-
-                        <!-- Lista de Jovens -->
                         <ul class="list-group list-group-flush">
                             {% for escala in missa.escalas %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <div>
                                     <strong>{{ escala.coroinha.nome }}</strong> 
                                     <span class="badge bg-secondary ms-1">{{ escala.funcao_atribuida }}</span><br>
-                                    <small class="text-muted">Resp: {{ escala.coroinha.responsavel_nome }}</small>
                                 </div>
                                 <div class="esconder-no-pdf">
-                                    <a href="https://wa.me/55{{ escala.coroinha.responsavel_telefone }}?text=Olá! Passando para avisar que o(a) {{ escala.coroinha.nome }} está escalado(a) como {{ escala.funcao_atribuida }} para a {{ missa.descricao }} no dia {{ missa.data_hora.strftime('%d/%m/%Y às %H:%M') }}. Você também pode ter sido sorteado(a) como Ajudante, verifique a escala completa! Confirma a presença?" 
-                                       target="_blank" class="btn btn-outline-success btn-sm me-1" title="Avisar Resp. 1">📱</a>
                                     <a href="/escala/deletar/{{ escala.id }}" class="btn btn-outline-danger btn-sm fw-bold" title="Remover Jovem">X</a>
                                 </div>
                             </li>
                             {% endfor %}
                         </ul>
                     {% else %}
-                        <div class="p-4 text-center text-muted">
-                            <i>Escala ainda não gerada para esta missa.</i>
-                        </div>
+                        <div class="p-4 text-center text-muted"><i>Escala ainda não gerada.</i></div>
                     {% endif %}
                 </div>
             </div>
         </div>
-        {% else %}
-        <div class="col-12 text-center text-muted mt-5">
-            <h4>Nenhuma missa encontrada.</h4>
-        </div>
         {% endfor %}
     </div>
 </div>
+
+<script>
+function copiarTexto() {
+    var copyText = document.getElementById("textoZap");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyText.value);
+    alert("Mensagem copiada! Cole no WhatsApp.");
+}
+</script>
 </body>
 </html>
