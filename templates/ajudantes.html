@@ -82,8 +82,9 @@
                                 {% endfor %}
                             </td>
                             <td class="text-center">
-                                <button class="btn btn-info btn-sm text-white" data-bs-toggle="modal" data-bs-target="#restAjudanteModal{{ ajudante.id }}">Restrições</button>
-                                <a href="/ajudante/deletar/{{ ajudante.id }}" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza?');">X</a>
+                                <button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#editAjudanteModal{{ ajudante.id }}">Editar</button>
+                                <button class="btn btn-info btn-sm text-white mb-1" data-bs-toggle="modal" data-bs-target="#restAjudanteModal{{ ajudante.id }}">Restrições</button>
+                                <a href="/ajudante/deletar/{{ ajudante.id }}" class="btn btn-danger btn-sm mb-1" onclick="return confirm('Tem certeza?');">X</a>
                             </td>
                         </tr>
 
@@ -114,6 +115,41 @@
                               </div>
                             </div>
                           </div>
+                        </div>
+                        <!-- Modal Edição Ajudante -->
+                        <div class="modal fade" id="editAjudanteModal{{ ajudante.id }}" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                            <div class="modal-header bg-warning">
+                                <h5 class="modal-title">Editar Ajudante: {{ ajudante.nome }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body text-start">
+                                <form action="/ajudante/editar/{{ ajudante.id }}" method="POST" class="row g-3">
+                                    <div class="col-md-5">
+                                        <label class="form-label">Nome Completo</label>
+                                        <input type="text" class="form-control" name="nome" value="{{ ajudante.nome }}" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">Telefone / WhatsApp</label>
+                                        <input type="text" class="form-control" name="telefone" value="{{ ajudante.telefone }}" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Filhos Vinculados (Segure CTRL)</label>
+                                        <select name="coroinhas_vinculados" class="form-select" multiple>
+                                            {% for c in coroinhas %}
+                                            <!-- O comando verifica se o filho já está vinculado para deixar selecionado -->
+                                            <option value="{{ c.id }}" {% if c in ajudante.coroinhas_vinculados %}selected{% endif %}>{{ c.nome }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-12 text-end mt-4">
+                                        <button type="submit" class="btn btn-success">Salvar Alterações</button>
+                                    </div>
+                                </form>
+                            </div>
+                            </div>
+                        </div>
                         </div>
                         {% endfor %}
                     </tbody>

@@ -196,6 +196,23 @@ def nova_restricao_ajudante(id):
     db.session.commit()
     return redirect(url_for('ajudantes'))
 
+@app.route('/ajudante/editar/<int:id>', methods=['POST'])
+def editar_ajudante(id):
+    ajudante = Ajudante.query.get_or_404(id)
+    ajudante.nome = request.form.get('nome')
+    ajudante.telefone = request.form.get('telefone')
+    
+    # Atualiza a lista de filhos vinculados
+    filhos_ids = request.form.getlist('coroinhas_vinculados')
+    ajudante.coroinhas_vinculados = [] # Limpa os vínculos antigos
+    for cid in filhos_ids:
+        filho = Coroinha.query.get(int(cid))
+        if filho: 
+            ajudante.coroinhas_vinculados.append(filho)
+            
+    db.session.commit()
+    return redirect(url_for('ajudantes'))
+
 
 # ==========================================
 # 5. ROTAS DE MISSAS E EVENTOS
