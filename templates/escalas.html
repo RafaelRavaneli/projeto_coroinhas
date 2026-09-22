@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Escalas Geradas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         @media print {
             .navbar, .btn, form, .esconder-no-pdf, .caixa-whatsapp { display: none !important; }
@@ -20,19 +25,24 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
     <div class="container">
         <span class="navbar-brand">Paróquia Santo Antônio</span>
-        <div class="navbar-nav">
-            <a class="nav-link" href="/">Coroinhas</a>
-            <a class="nav-link" href="/ajudantes">Ajudantes</a>
-            <a class="nav-link" href="/missas">Missas</a>
-            <a class="nav-link active" href="/escalas">Escalas</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-expanded="false" aria-label="Abrir menu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navMenu">
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/">Coroinhas</a>
+                <a class="nav-link" href="/ajudantes">Ajudantes</a>
+                <a class="nav-link" href="/missas">Missas</a>
+                <a class="nav-link active" href="/escalas">Escalas</a>
+            </div>
         </div>
     </div>
 </nav>
 
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-3 esconder-no-pdf">
+    <div class="d-flex justify-content-between align-items-center mb-3 esconder-no-pdf flex-wrap gap-2">
         <h2 class="text-primary m-0">Escalas de Missas</h2>
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 flex-wrap">
             <form action="/escala/gerar" method="POST" class="m-0">
                 <button type="submit" class="btn btn-success fw-bold shadow-sm">⚙️ Gerar Pendentes</button>
             </form>
@@ -50,7 +60,7 @@
 
     <!-- Caixa Geradora de WhatsApp -->
     <div class="card shadow-sm mb-4 border-success esconder-no-pdf caixa-whatsapp">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0">📱 Mensagem para o WhatsApp (Filtro Atual)</h5>
             <button onclick="copiarTexto()" class="btn btn-light btn-sm fw-bold">Copiar Texto</button>
         </div>
@@ -93,12 +103,17 @@
                         </div>
                         <ul class="list-group list-group-flush">
                             {% for escala in missa.escalas %}
-                            {% set tel_jovem = escala.coroinha.telefone_jovem or escala.coroinha.responsavel_telefone %}
+                            {% set tel_jovem = escala.coroinha.telefone_jovem %}
                             {% set msg_jovem = 'Olá ' ~ escala.coroinha.nome ~ '! Você foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {% set msg_resp1 = 'Olá ' ~ escala.coroinha.responsavel_nome ~ '! Seu(sua) filho(a) ' ~ escala.coroinha.nome ~ ' foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
+                            {% if escala.coroinha.responsavel2_telefone %}
+                            {% set msg_resp2 = 'Olá ' ~ (escala.coroinha.responsavel2_nome or 'responsável') ~ '! Seu(sua) filho(a) ' ~ escala.coroinha.nome ~ ' foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
+                            {% endif %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-1">
                                 <div>
                                     <strong>{{ escala.coroinha.nome }}</strong>
                                     <span class="badge bg-secondary ms-1">{{ escala.funcao_atribuida }}</span><br>
+                                    <small class="text-muted">Resp.: {{ escala.coroinha.responsavel_nome }}</small>
                                 </div>
                                 <div class="esconder-no-pdf d-flex gap-1">
                                     {% if tel_jovem %}
@@ -106,6 +121,19 @@
                                        target="_blank" class="btn btn-success btn-sm fw-bold"
                                        title="Notificar {{ escala.coroinha.nome }} via WhatsApp">📲</a>
                                     {% endif %}
+
+                                    {% if escala.coroinha.responsavel_telefone %}
+                                    <a href="https://wa.me/{{ escala.coroinha.responsavel_telefone|wa_link }}?text={{ msg_resp1|urlencode }}"
+                                       target="_blank" class="btn btn-outline-primary btn-sm fw-bold"
+                                       title="Notificar Responsável 1 ({{ escala.coroinha.responsavel_nome }}) via WhatsApp">👨‍👩‍👧</a>
+                                    {% endif %}
+
+                                    {% if escala.coroinha.responsavel2_telefone %}
+                                    <a href="https://wa.me/{{ escala.coroinha.responsavel2_telefone|wa_link }}?text={{ msg_resp2|urlencode }}"
+                                       target="_blank" class="btn btn-outline-primary btn-sm fw-bold"
+                                       title="Notificar Responsável 2 ({{ escala.coroinha.responsavel2_nome }}) via WhatsApp">👨‍👩‍👧</a>
+                                    {% endif %}
+
                                     <a href="/escala/deletar/{{ escala.id }}" class="btn btn-outline-danger btn-sm fw-bold" title="Remover Jovem">X</a>
                                 </div>
                             </li>

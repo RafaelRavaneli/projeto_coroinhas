@@ -1,0 +1,238 @@
+/* ==========================================================
+   Paróquia Santo Antônio — Sistema de Coroinhas
+   Folha de estilo compartilhada
+   ========================================================== */
+
+:root {
+    --bg: #EEEBE2;
+    --surface: #FFFFFF;
+    --ink: #23272B;
+    --ink-muted: #6B6F66;
+    --primary: #6E2A3B;
+    --primary-dark: #551F2C;
+    --primary-tint: #F4E9EB;
+    --gold: #A9822F;
+    --gold-light: #EFE3C4;
+    --green: #3E6E52;
+    --green-tint: #E7F0EA;
+    --danger: #A23B32;
+    --border: #DCD6C7;
+    --radius: 4px;
+    --shadow: 0 1px 2px rgba(35, 39, 43, 0.06), 0 2px 8px rgba(35, 39, 43, 0.05);
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6,
+.navbar-brand {
+    font-family: "Fraunces", "Georgia", serif;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+}
+
+a { color: var(--primary); }
+a:hover { color: var(--primary-dark); }
+
+/* -------------------- Navbar -------------------- */
+.navbar.bg-primary {
+    background-color: var(--ink) !important;
+    border-bottom: 3px solid var(--gold);
+    padding-top: 0.65rem;
+    padding-bottom: 0.65rem;
+}
+.navbar-brand {
+    font-size: 1.15rem;
+    color: #F5F1E6 !important;
+    letter-spacing: 0.01em;
+}
+.navbar .nav-link {
+    font-size: 0.92rem;
+    color: #D9D4C4 !important;
+    padding: 0.4rem 0.85rem !important;
+    border-radius: var(--radius);
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.navbar .nav-link:hover { color: #FFFFFF !important; background-color: rgba(255,255,255,0.08); }
+.navbar .nav-link.active {
+    color: #FFFFFF !important;
+    background-color: var(--primary);
+}
+.navbar-toggler {
+    border-color: rgba(255,255,255,0.3);
+    padding: 0.3rem 0.5rem;
+}
+.navbar-toggler:focus { box-shadow: 0 0 0 2px var(--gold); }
+.navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(245, 241, 230, 0.9)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e") !important;
+}
+@media (max-width: 991.98px) {
+    .navbar-nav { padding-top: 0.5rem; gap: 2px; }
+    .navbar .nav-link { padding: 0.55rem 0.75rem !important; }
+}
+
+/* -------------------- Page heading -------------------- */
+.text-primary { color: var(--primary) !important; }
+
+/* -------------------- Cards -------------------- */
+.card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+.card-header {
+    background-color: var(--surface) !important;
+    border-bottom: 2px solid var(--ink) !important;
+    color: var(--ink) !important;
+    padding: 0.9rem 1.1rem;
+}
+.card-header h5, .card-header h6 { font-family: "Fraunces", serif; margin: 0; }
+
+/* Colored headers (dashboard/blocks) -> flat ink or wine bar with left rule instead of solid SaaS block */
+.card-header.bg-primary {
+    background-color: var(--surface) !important;
+    color: var(--ink) !important;
+    border-left: 4px solid var(--primary);
+    border-bottom: 1px solid var(--border) !important;
+}
+.card-header.bg-primary small { color: var(--ink-muted) !important; }
+.card-header.bg-success {
+    background-color: var(--green-tint) !important;
+    color: var(--green) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+.card-header.bg-dark {
+    background-color: var(--ink) !important;
+    color: #F5F1E6 !important;
+    border-bottom: none !important;
+}
+.card-header.bg-warning {
+    background-color: var(--gold-light) !important;
+    color: var(--ink) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+.card-header.bg-info {
+    background-color: var(--primary-tint) !important;
+    color: var(--primary-dark) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+/* -------------------- Buttons -------------------- */
+.btn {
+    border-radius: var(--radius);
+    font-weight: 500;
+    font-size: 0.88rem;
+    padding: 0.45rem 0.95rem;
+    transition: transform 0.08s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn-sm { padding: 0.3rem 0.6rem; font-size: 0.82rem; }
+
+.btn-primary, .btn-success, .btn-dark, .btn-warning, .btn-info, .btn-danger {
+    border: none;
+}
+.btn-primary { background-color: var(--primary); }
+.btn-primary:hover, .btn-primary:focus { background-color: var(--primary-dark); }
+.btn-success { background-color: var(--green); color: #fff; }
+.btn-success:hover, .btn-success:focus { background-color: #2E5741; color: #fff; }
+.btn-dark { background-color: var(--ink); }
+.btn-dark:hover { background-color: #101316; }
+.btn-warning { background-color: var(--gold); color: #fff; }
+.btn-warning:hover { background-color: #8E6E28; color: #fff; }
+.btn-info { background-color: #2C5F6F; color: #FFFFFF; }
+.btn-info:hover, .btn-info:focus { background-color: #204853; color: #FFFFFF; }
+.btn-danger { background-color: var(--danger); }
+.btn-danger:hover { background-color: #832E27; }
+.btn-outline-secondary { border-color: var(--border); color: var(--ink-muted); }
+.btn-outline-danger { border-color: var(--danger); color: var(--danger); }
+.btn-outline-danger:hover { background-color: var(--danger); }
+.btn-outline-primary { border-color: var(--primary); color: var(--primary); }
+.btn-outline-primary:hover { background-color: var(--primary); }
+.btn-light { background-color: #F5F1E6; border-color: var(--border); }
+.btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* -------------------- Badges -------------------- */
+.badge {
+    font-weight: 500;
+    font-size: 0.74rem;
+    letter-spacing: 0.01em;
+    padding: 0.35em 0.65em;
+    border-radius: 3px;
+}
+.badge.bg-secondary { background-color: var(--primary-tint) !important; color: var(--primary-dark) !important; }
+.badge.bg-success { background-color: var(--green-tint) !important; color: var(--green) !important; }
+
+/* -------------------- Forms -------------------- */
+.form-label { font-size: 0.85rem; font-weight: 500; color: var(--ink-muted); margin-bottom: 0.3rem; }
+.form-control, .form-select {
+    border-color: var(--border);
+    border-radius: var(--radius);
+    font-size: 0.92rem;
+    padding: 0.5rem 0.75rem;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-tint);
+}
+
+/* -------------------- Tables -------------------- */
+.table { font-size: 0.9rem; }
+.table thead.table-light th {
+    background-color: var(--bg);
+    color: var(--ink-muted);
+    font-weight: 600;
+    font-size: 0.78rem;
+    text-transform: none;
+    border-bottom: 2px solid var(--ink);
+    white-space: nowrap;
+}
+.table > :not(caption) > * > * { padding: 0.7rem 0.85rem; }
+.table-hover > tbody > tr:hover > * { background-color: var(--primary-tint); }
+
+/* -------------------- List groups -------------------- */
+.list-group-item { border-color: var(--border); padding: 0.65rem 1rem; }
+
+/* -------------------- Modals -------------------- */
+.modal-content { border-radius: var(--radius); border: none; box-shadow: 0 12px 32px rgba(0,0,0,0.18); }
+.modal-header.bg-warning { background-color: var(--gold-light) !important; color: var(--ink) !important; }
+.modal-header.bg-info { background-color: var(--primary-tint) !important; color: var(--primary-dark) !important; }
+.modal-header { border-bottom: 1px solid var(--border); }
+
+/* -------------------- WhatsApp box -------------------- */
+.caixa-whatsapp .card-header { background-color: var(--green-tint) !important; color: var(--green) !important; border-left: 4px solid var(--green); }
+.caixa-whatsapp textarea { font-family: "IBM Plex Sans", sans-serif; font-size: 0.88rem; color: var(--ink); background: var(--surface); }
+
+/* -------------------- Responsive tweaks -------------------- */
+@media (max-width: 767.98px) {
+    .container { padding-left: 1rem; padding-right: 1rem; }
+    h2 { font-size: 1.4rem; }
+    .card-header { flex-direction: column; align-items: flex-start !important; gap: 0.5rem; }
+    .card-header form, .card-header .btn { width: 100%; }
+    .d-flex.gap-2 > form, .d-flex.gap-2 > .btn { flex: 1; }
+    table.table td, table.table th { font-size: 0.82rem; }
+    .list-group-item { flex-wrap: wrap; }
+    .list-group-item .esconder-no-pdf { width: 100%; justify-content: flex-end; margin-top: 0.35rem; }
+}
+
+@media (max-width: 575.98px) {
+    .navbar-brand { font-size: 1rem; }
+    .btn-sm { padding: 0.35rem 0.55rem; }
+}
+
+/* -------------------- Print -------------------- */
+@media print {
+    body { background: #fff !important; }
+    .card { box-shadow: none !important; }
+}
