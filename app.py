@@ -8,6 +8,16 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///paroquia.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
+# Filtro Jinja: limpa o telefone e garante o DDI 55 para o link do WhatsApp
+@app.template_filter('wa_link')
+def wa_link(numero):
+    if not numero:
+        return ''
+    limpo = re.sub(r'\D', '', numero)  # remove parênteses, traço, espaço
+    if len(limpo) <= 11:  # se não tiver DDI, adiciona o do Brasil
+        limpo = '55' + limpo
+    return limpo
+
 # ==========================================
 # 1. TABELAS DO BANCO DE DADOS
 # ==========================================

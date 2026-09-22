@@ -75,21 +75,37 @@
                     </form>
                     {% endif %}
                 </div>
-                
+
                 <div class="card-body p-0">
                     {% if missa.escalas %}
+                        {% set chegada = missa.data_hora.strftime('%H:%M') %}
                         <div class="bg-light p-3 border-bottom text-center">
                             <span class="badge bg-success mb-1">Ajudante (Responsável)</span>
-                            <h6 class="m-0 text-dark fw-bold">{{ missa.ajudante.nome if missa.ajudante else 'EM ABERTO' }}</h6>
+                            <h6 class="m-0 text-dark fw-bold d-flex justify-content-center align-items-center gap-2">
+                                {{ missa.ajudante.nome if missa.ajudante else 'EM ABERTO' }}
+                                {% if missa.ajudante and missa.ajudante.telefone %}
+                                    {% set msg_ajudante = 'Olá ' ~ missa.ajudante.nome ~ '! Você foi escalado(a) como *Responsável* pela missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ '. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
+                                    <a href="https://wa.me/{{ missa.ajudante.telefone|wa_link }}?text={{ msg_ajudante|urlencode }}"
+                                       target="_blank" class="btn btn-success btn-sm fw-bold esconder-no-pdf"
+                                       title="Notificar {{ missa.ajudante.nome }} via WhatsApp">📲</a>
+                                {% endif %}
+                            </h6>
                         </div>
                         <ul class="list-group list-group-flush">
                             {% for escala in missa.escalas %}
+                            {% set tel_jovem = escala.coroinha.telefone_jovem or escala.coroinha.responsavel_telefone %}
+                            {% set msg_jovem = 'Olá ' ~ escala.coroinha.nome ~ '! Você foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
                                 <div>
-                                    <strong>{{ escala.coroinha.nome }}</strong> 
+                                    <strong>{{ escala.coroinha.nome }}</strong>
                                     <span class="badge bg-secondary ms-1">{{ escala.funcao_atribuida }}</span><br>
                                 </div>
-                                <div class="esconder-no-pdf">
+                                <div class="esconder-no-pdf d-flex gap-1">
+                                    {% if tel_jovem %}
+                                    <a href="https://wa.me/{{ tel_jovem|wa_link }}?text={{ msg_jovem|urlencode }}"
+                                       target="_blank" class="btn btn-success btn-sm fw-bold"
+                                       title="Notificar {{ escala.coroinha.nome }} via WhatsApp">📲</a>
+                                    {% endif %}
                                     <a href="/escala/deletar/{{ escala.id }}" class="btn btn-outline-danger btn-sm fw-bold" title="Remover Jovem">X</a>
                                 </div>
                             </li>
