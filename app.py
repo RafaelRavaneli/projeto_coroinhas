@@ -302,6 +302,31 @@ def deletar_restricao_funcao(id):
 # ==========================================
 # 7. GERADOR DE WHATSAPP E MOTOR DE ESCALAS
 # ==========================================
+
+def chave_fim_de_semana(dt):
+    """Sábado e domingo devolvem a MESMA chave (a data do sábado).
+    Dias de semana devolvem None (sem limite por fim de semana)."""
+    d = dt.date() if hasattr(dt, 'date') else dt
+    if d.weekday() == 5:   # sábado
+        return d
+    if d.weekday() == 6:   # domingo
+        return d - timedelta(days=1)
+    return None
+ 
+ 
+def missas_do_mesmo_fim_de_semana(missa):
+    """Outras missas do mesmo sábado/domingo (exclui a própria missa)."""
+    chave = chave_fim_de_semana(missa.data_hora)
+    if chave is None:
+        return []
+    inicio = datetime.combine(chave, datetime.min.time())   # sábado 00:00
+    fim = inicio + timedelta(days=2)                        # segunda 00:00
+    return Missa.query.filter(
+        Missa.data_hora >= inicio,
+        Missa.data_hora < fim,
+        Missa.id != missa.id
+    ).all()
+
 def gerar_texto_whatsapp(missas_filtradas):
     dias = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
     texto = "Segue escala, *atualizada* das Missas desse final de semana!\n"
@@ -357,53 +382,70 @@ def escalas():
 
 @app.route('/escala/gerar', methods=['POST'])
 def gerar_escala_automatica():
-    missas = Missa.query.all()
-
+    # Ordem cronológica: as missas mais cedo são preenchidas primeiro
+    missas = Missa.query.order_by(Missa.data_hora).all()
+ 
     for missa in missas:
         funcoes_da_missa = MOLDES_LITURGICOS.get(missa.tipo_missa, [])
         hora = missa.data_hora.hour
         periodo_missa = 'Manhã' if hora < 12 else 'Tarde' if hora < 18 else 'Noite'
-
+ 
+        # Quem já está escalado em OUTRA missa deste mesmo fim de semana
+        outras = missas_do_mesmo_fim_de_semana(missa)
+        ids_outras = [m.id for m in outras]
+        coroinhas_ocupados = set()
+        if ids_outras:
+            coroinhas_ocupados = {
+                e.coroinha_id for e in Escala.query.filter(Escala.missa_id.in_(ids_outras)).all()
+            }
+        ajudantes_ocupados = {m.ajudante_id for m in outras if m.ajudante_id}
+ 
         # Passo 1: Preencher Coroinhas e Acólitos
         for item in funcoes_da_missa:
             if Escala.query.filter_by(missa_id=missa.id, funcao_atribuida=item['funcao']).first(): continue
-
+ 
             escalados_agora = Escala.query.filter_by(missa_id=missa.id).all()
             telefones_na_missa = [e.coroinha.responsavel_telefone for e in escalados_agora]
-
+ 
             candidatos_validos = []
             for candidato in Coroinha.query.filter_by(ativo=True, tipo=item['exigencia']).all():
                 if Escala.query.filter_by(missa_id=missa.id, coroinha_id=candidato.id).first(): continue
-                
+ 
+                # NOVO: já escalado em outra missa deste fim de semana
+                if candidato.id in coroinhas_ocupados: continue
+ 
                 if any(r.data_exata == missa.data_hora.date() and r.periodo in [periodo_missa, 'Dia Todo'] for r in candidato.restricoes): continue
                 if any(item['funcao'] in r.funcao_proibida for r in RestricaoFuncao.query.filter_by(coroinha_id=candidato.id).all()): continue
-                
+ 
                 candidatos_validos.append(candidato)
-
+ 
             if candidatos_validos:
                 random.shuffle(candidatos_validos)
                 candidatos_validos.sort(key=lambda c: (not c.responsavel_telefone in telefones_na_missa, Escala.query.filter_by(coroinha_id=c.id).count()))
                 db.session.add(Escala(coroinha_id=candidatos_validos[0].id, missa_id=missa.id, funcao_atribuida=item['funcao']))
                 db.session.flush()
-
+ 
         # Passo 2: Sorteio do Ajudante (Garante pais na mesma missa)
         escalas_finais = Escala.query.filter_by(missa_id=missa.id).all()
         if escalas_finais and not missa.ajudante_id:
             ajudantes_disponiveis = []
             for ajud in Ajudante.query.filter_by(ativo=True).all():
+                # NOVO: ajudante já responsável por outra missa deste fim de semana
+                if ajud.id in ajudantes_ocupados: continue
+ 
                 if not any(r.data_exata == missa.data_hora.date() and r.periodo in [periodo_missa, 'Dia Todo'] for r in ajud.restricoes):
                     if not EscalaAjudante.query.filter_by(missa_id=missa.id, ajudante_id=ajud.id).first():
                         ajudantes_disponiveis.append(ajud)
-            
+ 
             if ajudantes_disponiveis:
                 ids_na_missa = [e.coroinha_id for e in escalas_finais]
                 # Filtra os ajudantes que tem filhos escalados nesta missa específica
                 pais_na_missa = [a for a in ajudantes_disponiveis if any(filho.id in ids_na_missa for filho in a.coroinhas_vinculados)]
-                
+ 
                 escolhido = random.choice(pais_na_missa) if pais_na_missa else random.choice(ajudantes_disponiveis)
                 missa.ajudante_id = escolhido.id
                 db.session.add(EscalaAjudante(ajudante_id=escolhido.id, missa_id=missa.id))
-
+ 
     db.session.commit()
     return redirect(url_for('escalas'))
 
