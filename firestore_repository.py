@@ -50,6 +50,24 @@ class FirestoreRepository:
         cache_key = (model, tuple(sorted(filters.items())))
         if cache_key in self._cache:
             return list(self._cache[cache_key])
+        complete_cache_key = (model, ())
+        if filters and complete_cache_key in self._cache:
+            records = [
+                record for record in self._cache[complete_cache_key]
+                if all(
+                    getattr(record, field) == value
+                    or (
+                        field.endswith('_id')
+                        and isinstance(value, str)
+                        and value.isdecimal()
+                        and getattr(record, field) is not None
+                        and str(getattr(record, field)) == value
+                    )
+                    for field, value in filters.items()
+                )
+            ]
+            self._cache[cache_key] = records
+            return list(records)
         query = self.collection(model)
         for field, value in filters.items():
             query = query.where(field, '==', value)
@@ -60,6 +78,8 @@ class FirestoreRepository:
         unique = {snapshot.id: snapshot for snapshot in snapshots}
         records = [Document(self, model, snapshot.id, snapshot.to_dict()) for snapshot in unique.values()]
         self._cache[cache_key] = records
+        for record in records:
+            self._cache[(model, record.id)] = record
         return list(records)
 
     def get(self, model, document_id):

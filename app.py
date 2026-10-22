@@ -304,6 +304,7 @@ def editar_coroinha(id):
 def ajudantes():
     todos_ajudantes = sorted(store.all(Ajudante), key=lambda ajudante: ajudante.nome.casefold())
     todos_coroinhas = sorted(store.all(Coroinha), key=lambda coroinha: coroinha.nome.casefold())
+    store.all(RestricaoAjudante)
     return render_template('ajudantes.html', ajudantes=todos_ajudantes, coroinhas=todos_coroinhas)
 
 @app.route('/ajudante/novo', methods=['POST'])
@@ -496,6 +497,9 @@ def gerar_texto_whatsapp(missas_filtradas):
 def escalas():
     todas_missas = apply_date_filters(store.all(Missa))
     todas_missas.sort(key=lambda missa: missa.data_hora)
+    store.all(Escala)
+    store.all(Coroinha)
+    store.all(Ajudante)
     texto_wpp = gerar_texto_whatsapp(todas_missas)
     
     return render_template('escalas.html', missas=todas_missas, texto_whatsapp=texto_wpp, data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'))
