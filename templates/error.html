@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ status_code }} - Sistema de Escalas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <main class="container min-vh-100 d-flex align-items-center justify-content-center py-5">
+        <section class="card shadow-sm w-100" style="max-width: 560px;">
+            <div class="card-body p-4 p-md-5">
+                <p class="text-primary fw-bold mb-2">Erro {{ status_code }}</p>
+                <h1 class="h3 mb-3">Não foi possível concluir a solicitação</h1>
+                <p class="text-muted mb-4">{{ message }}</p>
+                <a href="{{ url_for('login') }}" class="btn btn-primary">Voltar ao login</a>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

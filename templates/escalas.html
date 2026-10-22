@@ -34,6 +34,10 @@
                 <a class="nav-link" href="/ajudantes">Ajudantes</a>
                 <a class="nav-link" href="/missas">Missas</a>
                 <a class="nav-link active" href="/escalas">Escalas</a>
+                <form action="{{ url_for('logout') }}" method="POST" class="d-inline ms-lg-2">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="nav-link border-0 bg-transparent">Sair</button>
+                </form>
             </div>
         </div>
     </div>
@@ -44,6 +48,7 @@
         <h2 class="text-primary m-0">Escalas de Missas</h2>
         <div class="d-flex gap-2 flex-wrap">
             <form action="/escala/gerar" method="POST" class="m-0">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-success fw-bold shadow-sm">⚙️ Gerar Pendentes</button>
             </form>
             <button onclick="window.print()" class="btn btn-dark fw-bold shadow-sm">🖨️ Salvar PDF</button>
@@ -81,6 +86,7 @@
                     </div>
                     {% if missa.escalas %}
                     <form action="/escala/regerar/{{ missa.id }}" method="POST" class="esconder-no-pdf">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn btn-warning btn-sm fw-bold">Refazer</button>
                     </form>
                     {% endif %}
@@ -134,7 +140,10 @@
                                        title="Notificar Responsável 2 ({{ escala.coroinha.responsavel2_nome }}) via WhatsApp">👨‍👩‍👧</a>
                                     {% endif %}
 
-                                    <a href="/escala/deletar/{{ escala.id }}" class="btn btn-outline-danger btn-sm fw-bold" title="Remover Jovem">X</a>
+                                    <form action="/escala/deletar/{{ escala.id }}" method="POST" onsubmit="return confirm('Remover jovem desta escala?');">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm fw-bold" aria-label="Remover {{ escala.coroinha.nome }} da escala">Remover</button>
+                                    </form>
                                 </div>
                             </li>
                             {% endfor %}

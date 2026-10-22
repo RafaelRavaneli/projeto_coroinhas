@@ -4,6 +4,7 @@ env/
 
 # Banco de Dados e Arquivos Locais (Evita vazar os dados da Paróquia)
 instance/
+backups/
 *.db
 *.sqlite
 *.sqlite3
@@ -16,6 +17,9 @@ __pycache__/
 
 # Variáveis de Ambiente
 .env
+
+# Credenciais Firebase
+projeto-coroinhas-cdaa044fc83c.json
 
 # Configurações de Editores (VS Code, etc)
 .vscode/

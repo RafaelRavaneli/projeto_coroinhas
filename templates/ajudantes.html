@@ -25,6 +25,10 @@
                 <a class="nav-link active" href="/ajudantes">Ajudantes</a>
                 <a class="nav-link" href="/missas">Missas</a>
                 <a class="nav-link" href="/escalas">Escalas</a>
+                <form action="{{ url_for('logout') }}" method="POST" class="d-inline ms-lg-2">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="nav-link border-0 bg-transparent">Sair</button>
+                </form>
             </div>
         </div>
     </div>
@@ -39,6 +43,7 @@
         </div>
         <div class="card-body">
             <form action="/ajudante/novo" method="POST" class="row g-3">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <div class="col-md-5">
                     <label class="form-label">Nome Completo</label>
                     <input type="text" class="form-control" name="nome" required>
@@ -65,7 +70,7 @@
 
     <div class="card shadow-sm">
         <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">Ajudantes Ativos</h5>
+            <h5 class="mb-0">Ajudantes cadastrados</h5>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -74,6 +79,7 @@
                         <tr>
                             <th>Nome</th>
                             <th>Telefone</th>
+                            <th>Situação</th>
                             <th>Filhos/Vínculo</th>
                             <th class="text-center">Ações (Restrições/Excluir)</th>
                         </tr>
@@ -83,6 +89,7 @@
                         <tr>
                             <td><strong>{{ ajudante.nome }}</strong></td>
                             <td>{{ ajudante.telefone }}</td>
+                            <td><span class="badge {{ 'bg-success' if ajudante.ativo else 'bg-secondary' }}">{{ 'Ativo' if ajudante.ativo else 'Inativo' }}</span></td>
                             <td>
                                 {% for c in ajudante.coroinhas_vinculados %}
                                     <span class="badge bg-secondary">{{ c.nome }}</span>
@@ -93,7 +100,10 @@
                             <td class="text-center">
                                 <button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#editAjudanteModal{{ ajudante.id }}">Editar</button>
                                 <button class="btn btn-info btn-sm text-white mb-1" data-bs-toggle="modal" data-bs-target="#restAjudanteModal{{ ajudante.id }}">Restrições</button>
-                                <a href="/ajudante/deletar/{{ ajudante.id }}" class="btn btn-danger btn-sm mb-1" onclick="return confirm('Tem certeza?');">X</a>
+                                <form action="/ajudante/deletar/{{ ajudante.id }}" method="POST" class="d-inline" onsubmit="return confirm('Excluir ajudante e dados relacionados?');">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger btn-sm mb-1" aria-label="Excluir {{ ajudante.nome }}">Excluir</button>
+                                </form>
                             </td>
                         </tr>
 
@@ -107,6 +117,7 @@
                               </div>
                               <div class="modal-body text-start">
                                   <form action="/ajudante/{{ ajudante.id }}/restricao/nova" method="POST" class="row g-2 mb-3">
+                                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                       <div class="col-sm-6"><input type="date" name="data_exata" class="form-control" required></div>
                                       <div class="col-sm-6">
                                           <select name="periodo" class="form-select" required>
@@ -118,7 +129,13 @@
                                   </form>
                                   <ul class="list-group">
                                       {% for r in ajudante.restricoes %}
-                                      <li class="list-group-item text-danger">Data: {{ r.data_exata.strftime('%d/%m/%Y') }} - {{ r.periodo }}</li>
+                                       <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
+                                           <span>Data: {{ r.data_exata.strftime('%d/%m/%Y') }} - {{ r.periodo }}</span>
+                                           <form action="{{ url_for('deletar_restricao_ajudante', id=r.id) }}" method="POST">
+                                               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                               <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Excluir restrição">Excluir</button>
+                                           </form>
+                                       </li>
                                       {% endfor %}
                                   </ul>
                               </div>
@@ -135,6 +152,7 @@
                             </div>
                             <div class="modal-body text-start">
                                 <form action="/ajudante/editar/{{ ajudante.id }}" method="POST" class="row g-3">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <div class="col-md-5">
                                         <label class="form-label">Nome Completo</label>
                                         <input type="text" class="form-control" name="nome" value="{{ ajudante.nome }}" required>
@@ -151,6 +169,10 @@
                                             <option value="{{ c.id }}" {% if c in ajudante.coroinhas_vinculados %}selected{% endif %}>{{ c.nome }}</option>
                                             {% endfor %}
                                         </select>
+                                    </div>
+                                    <div class="col-12 form-check ms-2">
+                                        <input type="checkbox" class="form-check-input" id="ajudanteAtivo{{ ajudante.id }}" name="ativo" value="1" {% if ajudante.ativo %}checked{% endif %}>
+                                        <label class="form-check-label" for="ajudanteAtivo{{ ajudante.id }}">Cadastro ativo</label>
                                     </div>
                                     <div class="col-12 text-end mt-4">
                                         <button type="submit" class="btn btn-success">Salvar Alterações</button>

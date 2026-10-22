@@ -22,6 +22,10 @@
         <div class="collapse navbar-collapse" id="navMenu">
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/">Voltar para Coroinhas</a>
+                <form action="{{ url_for('logout') }}" method="POST" class="d-inline ms-lg-2">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="nav-link border-0 bg-transparent">Sair</button>
+                </form>
             </div>
         </div>
     </div>
@@ -39,6 +43,7 @@
                 </div>
                 <div class="card-body">
                     <form action="/coroinha/{{ coroinha.id }}/restricao_data/nova" method="POST" class="row g-2 mb-4">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <div class="col-sm-5">
                             <input type="date" name="data_exata" class="form-control" required>
                         </div>
@@ -60,7 +65,10 @@
                         {% for horario in horarios %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span>Bloqueado: {{ horario.data_exata.strftime('%d/%m/%Y') }} ({{ horario.periodo }})</span>
-                            <a href="/restricao_data/deletar/{{ horario.id }}" class="btn btn-outline-danger btn-sm" title="Excluir restrição">X</a>
+                            <form action="/restricao_data/deletar/{{ horario.id }}" method="POST">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Excluir restrição">Excluir</button>
+                            </form>
                         </li>
                         {% else %}
                         <li class="list-group-item text-muted">Nenhuma data bloqueada.</li>
@@ -78,6 +86,7 @@
                 </div>
                 <div class="card-body">
                     <form action="/coroinha/{{ coroinha.id }}/restricao_funcao/nova" method="POST" class="row g-2 mb-4">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <div class="col-sm-9">
                             <select name="funcao_proibida" class="form-select" required>
                                 <option value="">Não pode exercer a função de...</option>
@@ -102,7 +111,10 @@
                         {% for funcao in funcoes %}
                         <li class="list-group-item d-flex justify-content-between align-items-center">
                             <span>Proibido: {{ funcao.funcao_proibida }}</span>
-                            <a href="/restricao_funcao/deletar/{{ funcao.id }}" class="btn btn-outline-danger btn-sm" title="Excluir restrição">X</a>
+                            <form action="/restricao_funcao/deletar/{{ funcao.id }}" method="POST">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Excluir restrição">Excluir</button>
+                            </form>
                         </li>
                         {% else %}
                         <li class="list-group-item text-muted">Apto para todas as funções.</li>
