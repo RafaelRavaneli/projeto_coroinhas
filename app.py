@@ -52,7 +52,17 @@ def csrf_token():
 
 @app.context_processor
 def inject_csrf_token():
-    return {'csrf_token': csrf_token}
+    return {'csrf_token': csrf_token, 'moldes': MOLDES_LITURGICOS, 'asset_version': ASSET_VERSION}
+
+
+def _asset_version():
+    """Muda quando CSS ou JS mudam, para o navegador não usar arquivo antigo do cache."""
+    pasta = os.path.join(app.root_path, 'static')
+    datas = [os.path.getmtime(os.path.join(raiz, nome)) for raiz, _, nomes in os.walk(pasta) for nome in nomes]
+    return str(int(max(datas))) if datas else '1'
+
+
+ASSET_VERSION = _asset_version()
 
 
 @app.before_request
@@ -214,6 +224,61 @@ def wa_link(numero):
         return ''
     return limpo
 
+
+# Apresentação de datas em português para os templates
+DIAS_CURTOS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+DIAS_LONGOS = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo']
+MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+
+
+@app.template_filter('dia_curto')
+def dia_curto(dt):
+    return DIAS_CURTOS[dt.weekday()]
+
+
+@app.template_filter('mes_curto')
+def mes_curto(dt):
+    return MESES[dt.month - 1][:3]
+
+
+@app.template_filter('data_extenso')
+def data_extenso(dt):
+    return f'{dt.day} de {MESES[dt.month - 1]} de {dt.year}'
+
+
+@app.template_filter('hora')
+def hora(dt):
+    return dt.strftime('%Hh%M')
+
+
+@app.template_filter('chegada')
+def chegada(dt):
+    return (dt - timedelta(minutes=30)).strftime('%Hh%M')
+
+
+@app.template_global()
+def agrupar_por_fim_de_semana(missas):
+    """Agrupa missas já ordenadas: sábado e domingo juntos; dias de semana separados."""
+    grupos = []
+    for missa in missas:
+        dia = missa.data_hora.date()
+        if dia.weekday() in (5, 6):
+            sabado = dia - timedelta(days=dia.weekday() - 5)
+            domingo = sabado + timedelta(days=1)
+            chave = ('fds', sabado)
+            if sabado.month == domingo.month:
+                rotulo = f'Fim de semana de {sabado.day} e {domingo.day} de {MESES[sabado.month - 1]}'
+            else:
+                rotulo = f'Fim de semana de {sabado.day} de {MESES[sabado.month - 1]} e {domingo.day} de {MESES[domingo.month - 1]}'
+        else:
+            chave = ('dia', dia)
+            rotulo = f'{DIAS_LONGOS[dia.weekday()]}, {dia.day} de {MESES[dia.month - 1]}'
+        if grupos and grupos[-1]['chave'] == chave:
+            grupos[-1]['missas'].append(missa)
+        else:
+            grupos.append({'chave': chave, 'rotulo': rotulo, 'missas': [missa]})
+    return grupos
+
 # ==========================================
 # 2. DEFINIÇÕES LITÚRGICAS
 # ==========================================
@@ -354,6 +419,7 @@ def editar_ajudante(id):
 def missas():
     missas_filtradas = apply_date_filters(store.all(Missa))
     missas_filtradas.sort(key=lambda missa: missa.data_hora)
+    store.all(Escala)
     return render_template('missas.html', missas=missas_filtradas, data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'))
 
 @app.route('/missa/nova', methods=['POST'])

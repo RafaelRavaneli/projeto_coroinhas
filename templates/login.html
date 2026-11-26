@@ -1,42 +1,36 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="robots" content="noindex, nofollow">
-    <title>Entrar - Paróquia Santo Antônio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-</head>
-<body class="bg-light">
-    <main class="container min-vh-100 d-flex align-items-center justify-content-center py-5">
-        <section class="card shadow-sm w-100" style="max-width: 440px;">
-            <div class="card-header bg-primary">
-                <h1 class="h4 mb-1">Paróquia Santo Antônio</h1>
-                <p class="mb-0 text-muted">Acesse o sistema de escalas</p>
+{% extends 'base.html' %}
+{% from '_ui.html' import icon, cross %}
+{% block title %}Entrar{% endblock %}
+
+{% block body %}
+<main class="auth">
+    <div class="auth-card">
+        <div class="auth-brand">
+            <span class="brand-mark">{{ cross(20) }}</span>
+            <div>
+                <h1>Paróquia Santo Antônio</h1>
+                <p>Escalas de coroinhas e acólitos</p>
             </div>
-            <div class="card-body p-4">
+        </div>
+        <section class="card">
+            <form method="POST" action="{{ url_for('login', next=next) if next else url_for('login') }}" class="card-body">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
                 {% if erro %}
-                <div class="alert alert-danger" role="alert">{{ erro }}</div>
+                <div class="alert alert-error" role="alert">{{ icon('alert') }} <span>{{ erro }} Confira e tente novamente.</span></div>
                 {% endif %}
-                <form method="POST" action="{{ url_for('login', next=next) if next else url_for('login') }}" class="d-grid gap-3">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
-                    <div>
-                        <label for="username" class="form-label">Usuário</label>
-                        <input id="username" name="username" type="text" class="form-control" autocomplete="username" required autofocus>
-                    </div>
-                    <div>
-                        <label for="password" class="form-label">Senha</label>
-                        <input id="password" name="password" type="password" class="form-control" autocomplete="current-password" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">Entrar</button>
-                </form>
-            </div>
+                <div class="field">
+                    <label for="username">Usuário</label>
+                    <input id="username" name="username" type="text" class="input" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+                </div>
+                <div class="field">
+                    <label for="password">Senha</label>
+                    <input id="password" name="password" type="password" class="input" autocomplete="current-password" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" data-busy="Entrando…"><span data-label>Entrar</span></button>
+            </form>
         </section>
-    </main>
-</body>
-</html>
+        <p class="auth-foot">Acesso restrito à coordenação.</p>
+    </div>
+</main>
+{% endblock %}

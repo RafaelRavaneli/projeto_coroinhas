@@ -1,0 +1,48 @@
+{% from '_ui.html' import icon, cross %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#fffdf8">
+    <title>{% block title %}Sistema de Escalas{% endblock %} · Paróquia Santo Antônio</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237a1f3a'/%3E%3Crect x='15' y='6' width='2.6' height='20' rx='1.3' fill='%23e6c983'/%3E%3Crect x='9' y='11' width='14' height='2.6' rx='1.3' fill='%23e6c983'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css', v=asset_version) }}" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/app.js', v=asset_version) }}" defer></script>
+</head>
+<body>
+{% block body %}
+<a class="skip" href="#conteudo">Pular para o conteúdo</a>
+
+{% set nav_items = [('index', 'Coroinhas'), ('ajudantes', 'Ajudantes'), ('missas', 'Missas'), ('escalas', 'Escalas')] %}
+{% set active = active_nav or request.endpoint %}
+<header class="topbar">
+    <div class="wrap">
+        <a class="brand" href="{{ url_for('index') }}">
+            <span class="brand-mark">{{ cross() }}</span>
+            <span class="brand-name">Paróquia Santo Antônio</span>
+        </a>
+        <nav class="nav" id="nav" aria-label="Principal">
+            {% for endpoint, label in nav_items %}
+            <a href="{{ url_for(endpoint) }}" {% if active == endpoint %}aria-current="page"{% endif %}>{{ label }}</a>
+            {% endfor %}
+            <form action="{{ url_for('logout') }}" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Sair</button>
+            </form>
+        </nav>
+        <button class="icon-btn menu-btn" type="button" data-menu-toggle aria-controls="nav" aria-expanded="false" aria-label="Abrir menu">{{ icon('menu', 18) }}</button>
+    </div>
+</header>
+
+<main id="conteudo" class="wrap page">
+    <p class="print-title">{% block print_title %}Paróquia Santo Antônio{% endblock %}</p>
+    {% block content %}{% endblock %}
+</main>
+{% endblock %}
+</body>
+</html>

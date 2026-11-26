@@ -1,0 +1,24 @@
+{%- macro icon(name, size=16) -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if name == 'plus' %}<path d="M12 5v14M5 12h14"/>
+{%- elif name == 'print' %}<path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>
+{%- elif name == 'spark' %}<path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
+{%- elif name == 'more' %}<circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/>
+{%- elif name == 'edit' %}<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>
+{%- elif name == 'trash' %}<path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/>
+{%- elif name == 'x' %}<path d="M18 6 6 18M6 6l12 12"/>
+{%- elif name == 'ban' %}<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>
+{%- elif name == 'chat' %}<path d="M21 12a9 9 0 0 1-13.4 7.9L3 21l1.1-4.6A9 9 0 1 1 21 12z"/>
+{%- elif name == 'refresh' %}<path d="M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.3L3 16M3 21v-5h5"/>
+{%- elif name == 'search' %}<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+{%- elif name == 'chev' %}<path d="m6 9 6 6 6-6"/>
+{%- elif name == 'back' %}<path d="M15 18l-6-6 6-6"/>
+{%- elif name == 'menu' %}<path d="M4 7h16M4 12h16M4 17h16"/>
+{%- elif name == 'calendar' %}<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+{%- elif name == 'alert' %}<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/>
+{%- endif -%}
+</svg>
+{%- endmacro -%}
+{%- macro cross(size=14) -%}
+<svg width="{{ size }}" height="{{ (size * 1.15)|round|int }}" viewBox="0 0 14 16" fill="#e6c983" aria-hidden="true"><rect x="6" y="0" width="2" height="16" rx="1"/><rect x="1.5" y="4" width="11" height="2" rx="1"/></svg>
+{%- endmacro -%}

@@ -1,0 +1,38 @@
+{# Uma função da missa: espera `item`, `escala` (ou vazio), `missa` e `quando` no contexto. #}
+{% from '_ui.html' import icon %}
+{% if escala and escala.coroinha %}
+{% set c = escala.coroinha %}
+{% set base_msg = ' foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ quando ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
+<li class="role">
+    <span class="role-name">{{ item.funcao }}</span>
+    <div class="person">
+        <strong>{{ c.nome }}</strong>
+        <small>Resp.: {{ c.responsavel_nome }}</small>
+    </div>
+    <details class="menu">
+        <summary class="icon-btn" aria-label="Ações para {{ c.nome }}" title="Avisar ou remover">{{ icon('more') }}</summary>
+        <div class="menu-panel">
+            {% if c.telefone_jovem and c.telefone_jovem|wa_link %}
+            <a class="menu-item wa" href="https://wa.me/{{ c.telefone_jovem|wa_link }}?text={{ ('Olá ' ~ c.nome ~ '! Você foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ quando ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍')|urlencode }}" target="_blank" rel="noopener">{{ icon('chat') }} Avisar {{ c.nome.split(' ')[0] }}</a>
+            {% endif %}
+            {% if c.responsavel_telefone and c.responsavel_telefone|wa_link %}
+            <a class="menu-item wa" href="https://wa.me/{{ c.responsavel_telefone|wa_link }}?text={{ ('Olá ' ~ c.responsavel_nome ~ '! ' ~ c.nome ~ base_msg)|urlencode }}" target="_blank" rel="noopener">{{ icon('chat') }} Avisar {{ c.responsavel_nome }}</a>
+            {% endif %}
+            {% if c.responsavel2_telefone and c.responsavel2_telefone|wa_link %}
+            <a class="menu-item wa" href="https://wa.me/{{ c.responsavel2_telefone|wa_link }}?text={{ ('Olá ' ~ (c.responsavel2_nome or 'responsável') ~ '! ' ~ c.nome ~ base_msg)|urlencode }}" target="_blank" rel="noopener">{{ icon('chat') }} Avisar {{ c.responsavel2_nome or 'responsável 2' }}</a>
+            {% endif %}
+            <div class="menu-sep" role="separator"></div>
+            <form action="{{ url_for('deletar_escala', id=escala.id) }}" method="POST" data-confirm="Remover {{ c.nome }} desta escala?">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="menu-item danger">{{ icon('x') }} Remover da escala</button>
+            </form>
+        </div>
+    </details>
+</li>
+{% else %}
+<li class="role is-open">
+    <span class="role-name">{{ item.funcao }}</span>
+    <div class="person"><strong>Em aberto</strong><small>Nenhum coroinha nesta função</small></div>
+    <span></span>
+</li>
+{% endif %}

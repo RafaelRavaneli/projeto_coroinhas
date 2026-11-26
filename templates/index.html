@@ -1,211 +1,153 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Coroinhas</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/style.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% extends 'base.html' %}
+{% from '_ui.html' import icon %}
+{% block title %}Coroinhas{% endblock %}
+{% block print_title %}Coroinhas e acólitos · Paróquia Santo Antônio{% endblock %}
 
-    <!-- Regras de Impressão -->
-    <style>
-        @media print {
-            .navbar, .esconder-no-pdf { display: none !important; }
-            body { background-color: white !important; }
-            .card { border: none !important; box-shadow: none !important; }
-            .card-header { background-color: transparent !important; color: black !important; padding-left: 0; border-bottom: 2px solid black; }
-            body::before {
-                content: "Relatório de Coroinhas - Paróquia Santo Antônio";
-                display: block;
-                font-size: 22px;
-                font-weight: bold;
-                text-align: center;
-                margin-bottom: 20px;
-            }
-        }
-    </style>
-</head>
-<body class="bg-light">
-
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-    <div class="container">
-        <span class="navbar-brand">Paróquia Santo Antônio</span>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-expanded="false" aria-label="Abrir menu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navMenu">
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link active" href="/">Coroinhas</a>
-                <a class="nav-link" href="/ajudantes">Ajudantes</a>
-                <a class="nav-link" href="/missas">Missas</a>
-                <a class="nav-link" href="/escalas">Escalas</a>
-                <form action="{{ url_for('logout') }}" method="POST" class="d-inline ms-lg-2">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="nav-link border-0 bg-transparent">Sair</button>
-                </form>
-            </div>
-        </div>
+{% block content %}
+{% macro campos_coroinha(c=None, prefixo='novo') %}
+<div class="form-grid">
+    <div class="field col-6">
+        <label for="{{ prefixo }}-nome">Nome do jovem</label>
+        <input class="input" id="{{ prefixo }}-nome" name="nome" value="{{ c.nome if c else '' }}" maxlength="100" autocomplete="off" required>
     </div>
-</nav>
-
-<div class="container">
-    <div class="d-flex justify-content-between align-items-center mb-4 esconder-no-pdf flex-wrap gap-2">
-        <h2 class="text-primary m-0">Paróquia Santo Antônio - Coroinhas</h2>
-        <button onclick="window.print()" class="btn btn-dark fw-bold shadow-sm">🖨️ Imprimir Lista</button>
+    <div class="field col-3">
+        <label for="{{ prefixo }}-tipo">Grau</label>
+        <select class="select" id="{{ prefixo }}-tipo" name="tipo" required>
+            <option value="Coroinha" {% if c and c.tipo == 'Coroinha' %}selected{% endif %}>Coroinha</option>
+            <option value="Acólito" {% if c and c.tipo == 'Acólito' %}selected{% endif %}>Acólito</option>
+        </select>
     </div>
-
-    <!-- Formulário de Cadastro (Oculto na impressão) -->
-    <div class="card shadow-sm mb-5 esconder-no-pdf">
-        <div class="card-header bg-primary text-white">
-            <h5 class="mb-0">Cadastrar Novo</h5>
-        </div>
-        <div class="card-body">
-            <form action="/coroinha/novo" method="POST" class="row g-3">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <div class="col-md-8">
-                    <label class="form-label">Nome do Jovem</label>
-                    <input type="text" class="form-control" name="nome" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Celular do Jovem</label>
-                    <input type="text" class="form-control" name="telefone_jovem" placeholder="Opcional">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Grau</label>
-                    <select name="tipo" class="form-select" required>
-                        <option value="Coroinha">Coroinha</option>
-                        <option value="Acólito">Acólito</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Nome do Responsável 1</label>
-                    <input type="text" class="form-control" name="responsavel_nome" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Telefone 1</label>
-                    <input type="text" class="form-control" name="responsavel_telefone" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Nome do Responsável 2</label>
-                    <input type="text" class="form-control" name="responsavel2_nome" placeholder="Opcional">
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Telefone 2</label>
-                    <input type="text" class="form-control" name="responsavel2_telefone" placeholder="Opcional">
-                </div>
-                <div class="col-12 text-end">
-                    <button type="submit" class="btn btn-success">Salvar Cadastro</button>
-                </div>
-            </form>
-        </div>
+    <div class="field col-3">
+        <label for="{{ prefixo }}-tel">Celular do jovem</label>
+        <input class="input" id="{{ prefixo }}-tel" name="telefone_jovem" type="tel" inputmode="tel" autocomplete="off" placeholder="Opcional" value="{{ c.telefone_jovem or '' if c else '' }}">
     </div>
+    <div class="field col-8">
+        <label for="{{ prefixo }}-r1">Responsável principal</label>
+        <input class="input" id="{{ prefixo }}-r1" name="responsavel_nome" maxlength="100" autocomplete="off" value="{{ c.responsavel_nome if c else '' }}" required>
+    </div>
+    <div class="field col-4">
+        <label for="{{ prefixo }}-r1tel">Telefone</label>
+        <input class="input" id="{{ prefixo }}-r1tel" name="responsavel_telefone" type="tel" inputmode="tel" autocomplete="off" placeholder="(11) 91234-5678" value="{{ c.responsavel_telefone if c else '' }}" required>
+    </div>
+    <div class="field col-8">
+        <label for="{{ prefixo }}-r2">Segundo responsável</label>
+        <input class="input" id="{{ prefixo }}-r2" name="responsavel2_nome" maxlength="100" autocomplete="off" placeholder="Opcional" value="{{ c.responsavel2_nome or '' if c else '' }}">
+    </div>
+    <div class="field col-4">
+        <label for="{{ prefixo }}-r2tel">Telefone</label>
+        <input class="input" id="{{ prefixo }}-r2tel" name="responsavel2_telefone" type="tel" inputmode="tel" autocomplete="off" placeholder="Opcional" value="{{ c.responsavel2_telefone or '' if c else '' }}">
+    </div>
+    {% if c %}
+    <label class="check col-12"><input type="checkbox" name="ativo" value="1" {% if c.ativo %}checked{% endif %}> Cadastro ativo (entra nas escalas)</label>
+    {% endif %}
+</div>
+{% endmacro %}
 
-    <!-- Tabela de Cadastrados -->
-    <div class="card shadow-sm">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">Coroinhas cadastrados</h5>
-        </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Nome</th>
-                            <th>Grau</th>
-                            <th>Situação</th>
-                            <th>Resp. Principal</th>
-                            <th>Contatos</th>
-                            <th class="text-center esconder-no-pdf">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for coroinha in coroinhas %}
-                        <tr>
-                            <td>{{ coroinha.nome }}</td>
-                            <td><span class="badge bg-secondary">{{ coroinha.tipo }}</span></td>
-                            <td><span class="badge {{ 'bg-success' if coroinha.ativo else 'bg-secondary' }}">{{ 'Ativo' if coroinha.ativo else 'Inativo' }}</span></td>
-                            <td>{{ coroinha.responsavel_nome }}</td>
-                            <td>
-                                <small>
-                                    J: {{ coroinha.telefone_jovem or '-' }}<br>
-                                    R1: {{ coroinha.responsavel_telefone }}<br>
-                                    R2: {{ coroinha.responsavel2_telefone or '-' }}
-                                </small>
-                            </td>
-                            <td class="text-center esconder-no-pdf">
-                                <a href="/coroinha/{{ coroinha.id }}/restricoes" class="btn btn-info btn-sm text-white mb-1">Restrições</a>
-                                <button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#editModal{{ coroinha.id }}">Editar</button>
-                                <form action="/coroinha/deletar/{{ coroinha.id }}" method="POST" class="d-inline" onsubmit="return confirm('Excluir coroinha e dados relacionados?');">
-                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-danger btn-sm mb-1" aria-label="Excluir {{ coroinha.nome }}">Excluir</button>
-                                </form>
-                            </td>
-                        </tr>
-
-                        <!-- Modal de Edição -->
-                        <div class="modal fade esconder-no-pdf" id="editModal{{ coroinha.id }}" tabindex="-1" aria-hidden="true">
-                          <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                              <div class="modal-header bg-warning">
-                                <h5 class="modal-title">Editar: {{ coroinha.nome }}</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                              </div>
-                              <div class="modal-body text-start">
-                                <form action="/coroinha/editar/{{ coroinha.id }}" method="POST" class="row g-3">
-                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                    <div class="col-md-5">
-                                        <label class="form-label">Nome do Jovem</label>
-                                        <input type="text" class="form-control" name="nome" value="{{ coroinha.nome }}" required>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Celular do Jovem</label>
-                                        <input type="text" class="form-control" name="telefone_jovem" value="{{ coroinha.telefone_jovem or '' }}">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Grau</label>
-                                        <select name="tipo" class="form-select" required>
-                                            <option value="Coroinha" {% if coroinha.tipo == 'Coroinha' %}selected{% endif %}>Coroinha</option>
-                                            <option value="Acólito" {% if coroinha.tipo == 'Acólito' %}selected{% endif %}>Acólito</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <label class="form-label">Responsável 1</label>
-                                        <input type="text" class="form-control" name="responsavel_nome" value="{{ coroinha.responsavel_nome }}" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Telefone 1</label>
-                                        <input type="text" class="form-control" name="responsavel_telefone" value="{{ coroinha.responsavel_telefone }}" required>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <label class="form-label">Responsável 2</label>
-                                        <input type="text" class="form-control" name="responsavel2_nome" value="{{ coroinha.responsavel2_nome or '' }}">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Telefone 2</label>
-                                        <input type="text" class="form-control" name="responsavel2_telefone" value="{{ coroinha.responsavel2_telefone or '' }}">
-                                    </div>
-                                    <div class="col-12 form-check ms-2">
-                                        <input type="checkbox" class="form-check-input" id="coroinhaAtivo{{ coroinha.id }}" name="ativo" value="1" {% if coroinha.ativo %}checked{% endif %}>
-                                        <label class="form-check-label" for="coroinhaAtivo{{ coroinha.id }}">Cadastro ativo</label>
-                                    </div>
-                                    <div class="col-12 text-end mt-4">
-                                        <button type="submit" class="btn btn-success">Salvar Alterações</button>
-                                    </div>
-                                </form>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+{% set ativos = coroinhas|selectattr('ativo')|list|length %}
+{% set acolitos = coroinhas|selectattr('tipo', 'equalto', 'Acólito')|list|length %}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Cadastro</p>
+        <h1>Coroinhas e acólitos</h1>
+        <p class="lead">{{ coroinhas|length }} cadastrados · {{ ativos }} ativos · {{ acolitos }} acólitos</p>
+    </div>
+    <div class="actions">
+        <button class="btn" type="button" onclick="window.print()">{{ icon('print') }} Imprimir lista</button>
+        <button class="btn btn-primary" type="button" data-open="novo-coroinha">{{ icon('plus') }} Cadastrar coroinha</button>
     </div>
 </div>
-</body>
-</html>
+
+<div class="toolbar">
+    <label class="search">
+        <span class="sr-only">Buscar por nome ou responsável</span>
+        {{ icon('search') }}
+        <input class="input" type="search" placeholder="Buscar por nome ou responsável…" data-search="tabela-coroinhas" autocomplete="off">
+    </label>
+</div>
+
+<section class="card">
+    <div class="table-wrap">
+        <table class="table" id="tabela-coroinhas">
+            <thead>
+                <tr>
+                    <th scope="col">Nome</th>
+                    <th scope="col">Grau</th>
+                    <th scope="col">Situação</th>
+                    <th scope="col">Responsáveis</th>
+                    <th scope="col"><span class="sr-only">Ações</span></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for coroinha in coroinhas %}
+                <tr data-text="{{ coroinha.nome }} {{ coroinha.responsavel_nome }} {{ coroinha.responsavel2_nome or '' }}">
+                    <td class="cell-name">
+                        <strong>{{ coroinha.nome }}</strong>
+                        {% if coroinha.telefone_jovem %}<small class="num">{{ coroinha.telefone_jovem }}</small>{% endif %}
+                    </td>
+                    <td class="cell-inline"><span class="badge {{ 'badge-wine' if coroinha.tipo == 'Acólito' else '' }}">{{ coroinha.tipo }}</span></td>
+                    <td class="cell-inline">
+                        {% if coroinha.ativo %}<span class="badge badge-green"><span class="dot"></span>Ativo</span>
+                        {% else %}<span class="badge badge-off"><span class="dot"></span>Inativo</span>{% endif %}
+                    </td>
+                    <td>
+                        <div class="contacts">
+                            <div>{{ coroinha.responsavel_nome }} <span class="num">{{ coroinha.responsavel_telefone }}</span></div>
+                            {% if coroinha.responsavel2_nome or coroinha.responsavel2_telefone %}
+                            <div>{{ coroinha.responsavel2_nome or 'Responsável 2' }} <span class="num">{{ coroinha.responsavel2_telefone or '' }}</span></div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="cell-actions">
+                        <details class="menu">
+                            <summary class="icon-btn" aria-label="Ações para {{ coroinha.nome }}">{{ icon('more') }}</summary>
+                            <div class="menu-panel">
+                                <button type="button" class="menu-item" data-open="editar-{{ coroinha.id }}">{{ icon('edit') }} Editar cadastro</button>
+                                <a class="menu-item" href="{{ url_for('restricoes', id=coroinha.id) }}">{{ icon('ban') }} Restrições</a>
+                                <div class="menu-sep" role="separator"></div>
+                                <form action="{{ url_for('deletar_coroinha', id=coroinha.id) }}" method="POST" data-confirm="Excluir {{ coroinha.nome }}? As restrições e escalas desse coroinha também serão apagadas.">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="menu-item danger">{{ icon('trash') }} Excluir</button>
+                                </form>
+                            </div>
+                        </details>
+                    </td>
+                </tr>
+            {% endfor %}
+                <tr class="empty-row" data-search-empty {% if coroinhas %}hidden{% endif %}><td colspan="5">{{ 'Nenhum coroinha encontrado.' if coroinhas else 'Nenhum coroinha cadastrado ainda.' }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<dialog class="modal" id="novo-coroinha" aria-labelledby="novo-coroinha-titulo">
+    <div class="modal-head">
+        <div><h2 id="novo-coroinha-titulo">Cadastrar coroinha</h2><p>Os campos marcados como opcionais podem ficar em branco.</p></div>
+        <button class="icon-btn" type="button" data-close aria-label="Fechar">{{ icon('x') }}</button>
+    </div>
+    <form action="{{ url_for('novo_coroinha') }}" method="POST" class="modal-body">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        {{ campos_coroinha() }}
+        <div class="form-actions">
+            <button type="button" class="btn" data-close>Cancelar</button>
+            <button type="submit" class="btn btn-primary" data-busy="Salvando…"><span data-label>Salvar cadastro</span></button>
+        </div>
+    </form>
+</dialog>
+
+{% for coroinha in coroinhas %}
+<dialog class="modal" id="editar-{{ coroinha.id }}" aria-labelledby="editar-{{ coroinha.id }}-titulo">
+    <div class="modal-head">
+        <div><h2 id="editar-{{ coroinha.id }}-titulo">Editar cadastro</h2><p>{{ coroinha.nome }}</p></div>
+        <button class="icon-btn" type="button" data-close aria-label="Fechar">{{ icon('x') }}</button>
+    </div>
+    <form action="{{ url_for('editar_coroinha', id=coroinha.id) }}" method="POST" class="modal-body">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        {{ campos_coroinha(coroinha, 'c' ~ coroinha.id) }}
+        <div class="form-actions">
+            <button type="button" class="btn" data-close>Cancelar</button>
+            <button type="submit" class="btn btn-primary" data-busy="Salvando…"><span data-label>Salvar alterações</span></button>
+        </div>
+    </form>
+</dialog>
+{% endfor %}
+{% endblock %}
