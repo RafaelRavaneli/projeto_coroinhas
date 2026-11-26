@@ -160,6 +160,8 @@ class Document:
             return value
         if name == 'coroinhas_vinculados_ids':
             return []
+        if name == 'ativo' and self._model in {'Coroinha', 'Ajudante'}:
+            return True
         if name in {'ajudante_id', 'telefone_jovem', 'responsavel2_nome', 'responsavel2_telefone', 'funcao_atribuida'}:
             return None
         return self._relationship(name)

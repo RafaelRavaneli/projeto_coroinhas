@@ -270,7 +270,8 @@ def novo_coroinha():
         responsavel_nome=required_text('responsavel_nome', 'Nome do responsável', 100),
         responsavel_telefone=validated_phone('responsavel_telefone', 'Telefone do responsável', required=True),
         responsavel2_nome=optional_text('responsavel2_nome', 'Nome do segundo responsável', 100),
-        responsavel2_telefone=validated_phone('responsavel2_telefone', 'Telefone do segundo responsável')
+        responsavel2_telefone=validated_phone('responsavel2_telefone', 'Telefone do segundo responsável'),
+        ativo=True,
     )
     return redirect(url_for('index'))
 
