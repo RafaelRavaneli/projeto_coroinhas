@@ -43,6 +43,10 @@
                 <a class="nav-link" href="/ajudantes">Ajudantes</a>
                 <a class="nav-link active" href="/missas">Missas</a>
                 <a class="nav-link" href="/escalas">Escalas</a>
+                <form action="{{ url_for('logout') }}" method="POST" class="d-inline ms-lg-2">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="nav-link border-0 bg-transparent">Sair</button>
+                </form>
             </div>
         </div>
     </div>
@@ -80,6 +84,7 @@
         </div>
         <div class="card-body">
             <form action="/missa/nova" method="POST" class="row g-3">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <div class="col-md-4">
                     <label for="descricao" class="form-label">Descrição (Ex: Missa de Domingo)</label>
                     <input type="text" class="form-control" id="descricao" name="descricao" required>
@@ -127,7 +132,10 @@
                             <td>{{ missa.tipo_missa }}</td>
                             <td class="text-center esconder-no-pdf">
                                 <button class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#editMissaModal{{ missa.id }}">Editar</button>
-                                <a href="/missa/deletar/{{ missa.id }}" class="btn btn-danger btn-sm" onclick="return confirm('Excluir esta missa?');">Excluir</a>
+                                <form action="/missa/deletar/{{ missa.id }}" method="POST" class="d-inline" onsubmit="return confirm('Excluir missa e escalas relacionadas?');">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-danger btn-sm">Excluir</button>
+                                </form>
                             </td>
                         </tr>
 
@@ -141,6 +149,7 @@
                               </div>
                               <div class="modal-body text-start">
                                 <form action="/missa/editar/{{ missa.id }}" method="POST" class="row g-3">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                                     <div class="col-md-12">
                                         <label class="form-label">Descrição</label>
                                         <input type="text" class="form-control" name="descricao" value="{{ missa.descricao }}" required>

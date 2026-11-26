@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "deny": [
+      "Skill(design-taste-frontend)",
+      "Skill(design-taste-frontend:*)"
+    ]
+  }
+}
