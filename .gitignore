@@ -23,3 +23,8 @@ projeto-coroinhas-cdaa044fc83c.json
 
 # Configurações de Editores (VS Code, etc)
 .vscode/
+
+# Testes
+.pytest_cache/
+
+.venv/

@@ -16,6 +16,7 @@
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             body { background-color: white !important; }
             .card { border: 1px solid #ddd !important; box-shadow: none !important; margin-bottom: 20px !important; break-inside: avoid; }
+            .conflito { border-left: 0 !important; background-color: transparent !important; }
             .pdf-titulo::before { content: "Escala Oficial - Paróquia Santo Antônio"; display: block; font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 20px; color: black; }
         }
     </style>
@@ -44,16 +45,25 @@
 </nav>
 
 <div class="container">
+    {% include '_avisos.html' %}
     <div class="d-flex justify-content-between align-items-center mb-3 esconder-no-pdf flex-wrap gap-2">
         <h2 class="text-primary m-0">Escalas de Missas</h2>
         <div class="d-flex gap-2 flex-wrap">
-            <form action="/escala/gerar" method="POST" class="m-0">
+            <form action="/escala/gerar" method="POST" class="m-0"{% if total_conflitos %} onsubmit="return confirm('Serão removidos {{ total_conflitos }} escalado(s) em conflito e as vagas serão preenchidas de novo. O restante da escala não muda. Continuar?');"{% endif %}>
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-success fw-bold shadow-sm">⚙️ Gerar Pendentes</button>
+                <button type="submit" class="btn btn-success fw-bold shadow-sm">⚙️ Gerar / Corrigir</button>
             </form>
             <button onclick="window.print()" class="btn btn-dark fw-bold shadow-sm">🖨️ Salvar PDF</button>
         </div>
     </div>
+
+    {% if total_conflitos %}
+    <div class="alert alert-danger d-print-none" role="alert">
+        <strong>⚠️ {{ total_conflitos }} conflito(s) nas missas futuras.</strong>
+        Há pessoas escaladas que têm restrição de data/período, função proibida ou grau incompatível.
+        Use <em>Gerar / Corrigir</em> para removê-las e preencher as vagas com quem pode.
+    </div>
+    {% endif %}
 
     <form method="GET" action="/escalas" class="row g-2 mb-4 justify-content-center bg-white p-3 rounded shadow-sm border esconder-no-pdf">
         <div class="col-md-auto d-flex align-items-center"><strong>📅 Filtrar:</strong></div>
@@ -95,7 +105,8 @@
                 <div class="card-body p-0">
                     {% if missa.escalas %}
                         {% set chegada = missa.data_hora.strftime('%H:%M') %}
-                        <div class="bg-light p-3 border-bottom text-center">
+                        {% set motivos_ajudante = conflitos_ajudantes.get(missa.id) %}
+                        <div class="bg-light p-3 border-bottom text-center{% if motivos_ajudante %} conflito border-start border-danger border-4{% endif %}">
                             <span class="badge bg-success mb-1">Ajudante (Responsável)</span>
                             <h6 class="m-0 text-dark fw-bold d-flex justify-content-center align-items-center gap-2">
                                 {{ missa.ajudante.nome if missa.ajudante else 'EM ABERTO' }}
@@ -106,6 +117,9 @@
                                        title="Notificar {{ missa.ajudante.nome }} via WhatsApp">📲</a>
                                 {% endif %}
                             </h6>
+                            {% if motivos_ajudante %}
+                            <div class="text-danger small fw-bold d-print-none">⚠️ Conflito: {{ motivos_ajudante|join('; ') }}</div>
+                            {% endif %}
                         </div>
                         <ul class="list-group list-group-flush">
                             {% for escala in missa.escalas %}
@@ -115,11 +129,15 @@
                             {% if escala.coroinha.responsavel2_telefone %}
                             {% set msg_resp2 = 'Olá ' ~ (escala.coroinha.responsavel2_nome or 'responsável') ~ '! ' ~ escala.coroinha.nome ~ ' foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
                             {% endif %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-1">
+                            {% set motivos = conflitos_escalas.get(escala.id) %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-1{% if motivos %} conflito border-start border-danger border-4 list-group-item-danger{% endif %}">
                                 <div>
                                     <strong>{{ escala.coroinha.nome }}</strong>
                                     <span class="badge bg-secondary ms-1">{{ escala.funcao_atribuida }}</span><br>
                                     <small class="text-muted">Resp.: {{ escala.coroinha.responsavel_nome }}</small>
+                                    {% if motivos %}
+                                    <div class="text-danger small fw-bold d-print-none">⚠️ Conflito: {{ motivos|join('; ') }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="esconder-no-pdf d-flex gap-1">
                                     {% if tel_jovem %}
