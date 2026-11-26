@@ -1,5 +1,11 @@
+{# Mensagens depois de uma ação (flash). Fica no layout, então aparece em todas as páginas. #}
+{% from '_ui.html' import icon %}
 {% with mensagens = get_flashed_messages(with_categories=true) %}
-{% for categoria, texto in mensagens %}
-<div class="alert alert-{{ categoria }} d-print-none" role="alert">{{ texto }}</div>
-{% endfor %}
+{% if mensagens %}
+<div class="alerts no-print" role="status">
+    {% for categoria, texto in mensagens %}
+    <div class="alert alert-{{ categoria }}">{{ icon('alert') }}<span>{{ texto }}</span></div>
+    {% endfor %}
+</div>
+{% endif %}
 {% endwith %}

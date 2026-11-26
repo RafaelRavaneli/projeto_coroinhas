@@ -1,194 +1,174 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Ajudantes</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/style.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</head>
-<body class="bg-light">
+{% extends 'base.html' %}
+{% from '_ui.html' import icon %}
+{% block title %}Ajudantes{% endblock %}
+{% block print_title %}Ajudantes e responsáveis · Paróquia Santo Antônio{% endblock %}
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-    <div class="container">
-        <span class="navbar-brand">Paróquia Santo Antônio</span>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-expanded="false" aria-label="Abrir menu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navMenu">
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/">Coroinhas</a>
-                <a class="nav-link active" href="/ajudantes">Ajudantes</a>
-                <a class="nav-link" href="/missas">Missas</a>
-                <a class="nav-link" href="/escalas">Escalas</a>
-                <form action="{{ url_for('logout') }}" method="POST" class="d-inline ms-lg-2">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="nav-link border-0 bg-transparent">Sair</button>
-                </form>
-            </div>
-        </div>
+{% block content %}
+{% macro campos_ajudante(a=None, prefixo='novo') %}
+{% set vinculados = a.coroinhas_vinculados_ids|map('string')|list if a else [] %}
+<div class="form-grid">
+    <div class="field col-8">
+        <label for="{{ prefixo }}-nome">Nome completo</label>
+        <input class="input" id="{{ prefixo }}-nome" name="nome" maxlength="100" autocomplete="off" value="{{ a.nome if a else '' }}" required>
     </div>
-</nav>
-
-<div class="container">
-    {% include '_avisos.html' %}
-    <h2 class="mb-4 text-center text-success">Cadastro de Ajudantes e Responsáveis</h2>
-
-    <div class="card shadow-sm mb-5">
-        <div class="card-header bg-success text-white">
-            <h5 class="mb-0">Cadastrar Novo Ajudante</h5>
-        </div>
-        <div class="card-body">
-            <form action="/ajudante/novo" method="POST" class="row g-3">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <div class="col-md-5">
-                    <label class="form-label">Nome Completo</label>
-                    <input type="text" class="form-control" name="nome" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Telefone / WhatsApp</label>
-                    <input type="text" class="form-control" name="telefone" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Filhos Vinculados (Segure CTRL para vários)</label>
-                    <select name="coroinhas_vinculados" class="form-select" multiple>
-                        {% for c in coroinhas %}
-                        <option value="{{ c.id }}">{{ c.nome }}</option>
-                        {% endfor %}
-                    </select>
-                    <small class="text-muted">Se for pai/mãe, vincule aqui para escala conjunta.</small>
-                </div>
-                <div class="col-12 text-end">
-                    <button type="submit" class="btn btn-success">Salvar Cadastro</button>
-                </div>
-            </form>
-        </div>
+    <div class="field col-4">
+        <label for="{{ prefixo }}-tel">Telefone / WhatsApp</label>
+        <input class="input" id="{{ prefixo }}-tel" name="telefone" type="tel" inputmode="tel" autocomplete="off" placeholder="(11) 91234-5678" value="{{ a.telefone if a else '' }}" required>
     </div>
-
-    <div class="card shadow-sm">
-        <div class="card-header bg-dark text-white">
-            <h5 class="mb-0">Ajudantes cadastrados</h5>
+    <fieldset class="field col-12" style="border:0;margin:0;padding:0">
+        <legend class="label">Filhos vinculados</legend>
+        <span class="hint">Se for pai ou mãe de coroinha, marque os filhos para que sejam escalados juntos.</span>
+        <div class="check-list">
+            {% for c in coroinhas %}
+            <label class="check"><input type="checkbox" name="coroinhas_vinculados" value="{{ c.id }}" {% if c.id|string in vinculados %}checked{% endif %}> {{ c.nome }}</label>
+            {% else %}
+            <span class="hint" style="padding:8px">Nenhum coroinha cadastrado.</span>
+            {% endfor %}
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Nome</th>
-                            <th>Telefone</th>
-                            <th>Situação</th>
-                            <th>Filhos/Vínculo</th>
-                            <th class="text-center">Ações (Restrições/Excluir)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for ajudante in ajudantes %}
-                        <tr>
-                            <td><strong>{{ ajudante.nome }}</strong></td>
-                            <td>{{ ajudante.telefone }}</td>
-                            <td><span class="badge {{ 'bg-success' if ajudante.ativo else 'bg-secondary' }}">{{ 'Ativo' if ajudante.ativo else 'Inativo' }}</span></td>
-                            <td>
-                                {% for c in ajudante.coroinhas_vinculados %}
-                                    <span class="badge bg-secondary">{{ c.nome }}</span>
-                                {% else %}
-                                    <span class="text-muted">Nenhum</span>
-                                {% endfor %}
-                            </td>
-                            <td class="text-center">
-                                <button class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#editAjudanteModal{{ ajudante.id }}">Editar</button>
-                                <button class="btn btn-info btn-sm text-white mb-1" data-bs-toggle="modal" data-bs-target="#restAjudanteModal{{ ajudante.id }}">Restrições</button>
-                                <form action="/ajudante/deletar/{{ ajudante.id }}" method="POST" class="d-inline" onsubmit="return confirm('Excluir ajudante e dados relacionados?');">
-                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                    <button type="submit" class="btn btn-danger btn-sm mb-1" aria-label="Excluir {{ ajudante.nome }}">Excluir</button>
-                                </form>
-                            </td>
-                        </tr>
+    </fieldset>
+    {% if a %}
+    <label class="check col-12"><input type="checkbox" name="ativo" value="1" {% if a.ativo %}checked{% endif %}> Cadastro ativo (entra nas escalas)</label>
+    {% endif %}
+</div>
+{% endmacro %}
 
-                        <!-- Modal Restricoes Ajudante -->
-                        <div class="modal fade" id="restAjudanteModal{{ ajudante.id }}" tabindex="-1" aria-hidden="true">
-                          <div class="modal-dialog">
-                            <div class="modal-content">
-                              <div class="modal-header bg-info text-white">
-                                <h5 class="modal-title">Restrições: {{ ajudante.nome }}</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                              </div>
-                              <div class="modal-body text-start">
-                                  <form action="/ajudante/{{ ajudante.id }}/restricao/nova" method="POST" class="row g-2 mb-3">
-                                      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                      <div class="col-sm-6"><input type="date" name="data_exata" class="form-control" required></div>
-                                      <div class="col-sm-6">
-                                          <select name="periodo" class="form-select" required>
-                                              <option value="Manhã">Manhã</option><option value="Tarde">Tarde</option>
-                                              <option value="Noite">Noite</option><option value="Dia Todo">Dia Todo</option>
-                                          </select>
-                                      </div>
-                                      <button type="submit" class="btn btn-success btn-sm w-100 mt-2">Adicionar Indisponibilidade</button>
-                                  </form>
-                                  <ul class="list-group">
-                                      {% for r in ajudante.restricoes %}
-                                       <li class="list-group-item d-flex justify-content-between align-items-center gap-2">
-                                           <span>Data: {{ r.data_exata.strftime('%d/%m/%Y') }} - {{ r.periodo }}</span>
-                                           <form action="{{ url_for('deletar_restricao_ajudante', id=r.id) }}" method="POST">
-                                               <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                               <button type="submit" class="btn btn-outline-danger btn-sm" aria-label="Excluir restrição">Excluir</button>
-                                           </form>
-                                       </li>
-                                      {% endfor %}
-                                  </ul>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <!-- Modal Edição Ajudante -->
-                        <div class="modal fade" id="editAjudanteModal{{ ajudante.id }}" tabindex="-1" aria-hidden="true">
-                        <div class="modal-dialog modal-lg">
-                            <div class="modal-content">
-                            <div class="modal-header bg-warning">
-                                <h5 class="modal-title">Editar Ajudante: {{ ajudante.nome }}</h5>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-body text-start">
-                                <form action="/ajudante/editar/{{ ajudante.id }}" method="POST" class="row g-3">
-                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                    <div class="col-md-5">
-                                        <label class="form-label">Nome Completo</label>
-                                        <input type="text" class="form-control" name="nome" value="{{ ajudante.nome }}" required>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label">Telefone / WhatsApp</label>
-                                        <input type="text" class="form-control" name="telefone" value="{{ ajudante.telefone }}" required>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label">Filhos Vinculados (Segure CTRL)</label>
-                                        <select name="coroinhas_vinculados" class="form-select" multiple>
-                                            {% for c in coroinhas %}
-                                            <!-- O comando verifica se o filho já está vinculado para deixar selecionado -->
-                                            <option value="{{ c.id }}" {% if c in ajudante.coroinhas_vinculados %}selected{% endif %}>{{ c.nome }}</option>
-                                            {% endfor %}
-                                        </select>
-                                    </div>
-                                    <div class="col-12 form-check ms-2">
-                                        <input type="checkbox" class="form-check-input" id="ajudanteAtivo{{ ajudante.id }}" name="ativo" value="1" {% if ajudante.ativo %}checked{% endif %}>
-                                        <label class="form-check-label" for="ajudanteAtivo{{ ajudante.id }}">Cadastro ativo</label>
-                                    </div>
-                                    <div class="col-12 text-end mt-4">
-                                        <button type="submit" class="btn btn-success">Salvar Alterações</button>
-                                    </div>
-                                </form>
-                            </div>
-                            </div>
-                        </div>
-                        </div>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+{% set ativos = ajudantes|selectattr('ativo')|list|length %}
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Cadastro</p>
+        <h1>Ajudantes e responsáveis</h1>
+        <p class="lead">{{ ajudantes|length }} cadastrados · {{ ativos }} ativos</p>
+    </div>
+    <div class="actions">
+        <button class="btn btn-primary" type="button" data-open="novo-ajudante">{{ icon('plus') }} Cadastrar ajudante</button>
     </div>
 </div>
-</body>
-</html>
+
+<div class="toolbar">
+    <label class="search">
+        <span class="sr-only">Buscar por nome</span>
+        {{ icon('search') }}
+        <input class="input" type="search" placeholder="Buscar por nome ou filho…" data-search="tabela-ajudantes" autocomplete="off">
+    </label>
+</div>
+
+<section class="card">
+    <div class="table-wrap">
+        <table class="table" id="tabela-ajudantes">
+            <thead>
+                <tr>
+                    <th scope="col">Nome</th>
+                    <th scope="col">Situação</th>
+                    <th scope="col">Filhos vinculados</th>
+                    <th scope="col">Indisponível em</th>
+                    <th scope="col"><span class="sr-only">Ações</span></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for ajudante in ajudantes %}
+                {% set filhos = ajudante.coroinhas_vinculados %}
+                {% set restricoes = ajudante.restricoes|sort(attribute='data_exata') %}
+                <tr data-text="{{ ajudante.nome }} {% for c in filhos %}{{ c.nome }} {% endfor %}">
+                    <td class="cell-name">
+                        <strong>{{ ajudante.nome }}</strong>
+                        <small class="num">{{ ajudante.telefone }}</small>
+                    </td>
+                    <td class="cell-inline">
+                        {% if ajudante.ativo %}<span class="badge badge-green"><span class="dot"></span>Ativo</span>
+                        {% else %}<span class="badge badge-off"><span class="dot"></span>Inativo</span>{% endif %}
+                    </td>
+                    <td data-label="Filhos">
+                        <div class="tags">
+                        {% for c in filhos %}<span class="badge">{{ c.nome }}</span>{% else %}<span class="muted">Nenhum</span>{% endfor %}
+                        </div>
+                    </td>
+                    <td data-label="Indisponível">
+                        {% if restricoes %}<span class="badge badge-open">{{ restricoes|length }} {{ 'data' if restricoes|length == 1 else 'datas' }}</span>{% else %}<span class="muted">—</span>{% endif %}
+                    </td>
+                    <td class="cell-actions">
+                        <details class="menu">
+                            <summary class="icon-btn" aria-label="Ações para {{ ajudante.nome }}">{{ icon('more') }}</summary>
+                            <div class="menu-panel">
+                                <button type="button" class="menu-item" data-open="editar-{{ ajudante.id }}">{{ icon('edit') }} Editar cadastro</button>
+                                <button type="button" class="menu-item" data-open="restricoes-{{ ajudante.id }}">{{ icon('ban') }} Datas indisponíveis</button>
+                                <div class="menu-sep" role="separator"></div>
+                                <form action="{{ url_for('deletar_ajudante', id=ajudante.id) }}" method="POST" data-confirm="Excluir {{ ajudante.nome }}? As restrições e as escalas como responsável também serão apagadas.">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="menu-item danger">{{ icon('trash') }} Excluir</button>
+                                </form>
+                            </div>
+                        </details>
+                    </td>
+                </tr>
+            {% endfor %}
+                <tr class="empty-row" data-search-empty {% if ajudantes %}hidden{% endif %}><td colspan="5">{{ 'Nenhum ajudante encontrado.' if ajudantes else 'Nenhum ajudante cadastrado ainda.' }}</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<dialog class="modal" id="novo-ajudante" aria-labelledby="novo-ajudante-titulo">
+    <div class="modal-head">
+        <div><h2 id="novo-ajudante-titulo">Cadastrar ajudante</h2><p>Pais, mães e voluntários que acompanham as missas.</p></div>
+        <button class="icon-btn" type="button" data-close aria-label="Fechar">{{ icon('x') }}</button>
+    </div>
+    <form action="{{ url_for('novo_ajudante') }}" method="POST" class="modal-body">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        {{ campos_ajudante() }}
+        <div class="form-actions">
+            <button type="button" class="btn" data-close>Cancelar</button>
+            <button type="submit" class="btn btn-primary" data-busy="Salvando…"><span data-label>Salvar cadastro</span></button>
+        </div>
+    </form>
+</dialog>
+
+{% for ajudante in ajudantes %}
+<dialog class="modal" id="editar-{{ ajudante.id }}" aria-labelledby="editar-{{ ajudante.id }}-titulo">
+    <div class="modal-head">
+        <div><h2 id="editar-{{ ajudante.id }}-titulo">Editar cadastro</h2><p>{{ ajudante.nome }}</p></div>
+        <button class="icon-btn" type="button" data-close aria-label="Fechar">{{ icon('x') }}</button>
+    </div>
+    <form action="{{ url_for('editar_ajudante', id=ajudante.id) }}" method="POST" class="modal-body">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+        {{ campos_ajudante(ajudante, 'a' ~ ajudante.id) }}
+        <div class="form-actions">
+            <button type="button" class="btn" data-close>Cancelar</button>
+            <button type="submit" class="btn btn-primary" data-busy="Salvando…"><span data-label>Salvar alterações</span></button>
+        </div>
+    </form>
+</dialog>
+
+<dialog class="modal modal-sm" id="restricoes-{{ ajudante.id }}" aria-labelledby="restricoes-{{ ajudante.id }}-titulo">
+    <div class="modal-head">
+        <div><h2 id="restricoes-{{ ajudante.id }}-titulo">Datas indisponíveis</h2><p>{{ ajudante.nome }} não será escalado nesses dias.</p></div>
+        <button class="icon-btn" type="button" data-close aria-label="Fechar">{{ icon('x') }}</button>
+    </div>
+    <div class="modal-body">
+        <form action="{{ url_for('nova_restricao_ajudante', id=ajudante.id) }}" method="POST" class="inline-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <label class="sr-only" for="ra-data-{{ ajudante.id }}">Data</label>
+            <input class="input" type="date" id="ra-data-{{ ajudante.id }}" name="data_exata" required>
+            <label class="sr-only" for="ra-per-{{ ajudante.id }}">Período</label>
+            <select class="select" id="ra-per-{{ ajudante.id }}" name="periodo" required>
+                <option value="Dia Todo">Dia todo</option><option value="Manhã">Manhã</option>
+                <option value="Tarde">Tarde</option><option value="Noite">Noite</option>
+            </select>
+            <button type="submit" class="btn btn-primary">{{ icon('plus') }} Adicionar</button>
+        </form>
+        <ul class="list" style="margin-top:12px">
+            {% for r in ajudante.restricoes|sort(attribute='data_exata') %}
+            <li>
+                <span><strong class="num">{{ r.data_exata.strftime('%d/%m/%Y') }}</strong> <span class="muted">· {{ r.periodo }}</span></span>
+                <form action="{{ url_for('deletar_restricao_ajudante', id=r.id) }}" method="POST" data-confirm="Remover a indisponibilidade de {{ r.data_exata.strftime('%d/%m/%Y') }}?">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="icon-btn danger" aria-label="Remover indisponibilidade de {{ r.data_exata.strftime('%d/%m/%Y') }}">{{ icon('x') }}</button>
+                </form>
+            </li>
+            {% else %}
+            <li class="empty-item">Nenhuma data cadastrada.</li>
+            {% endfor %}
+        </ul>
+    </div>
+</dialog>
+{% endfor %}
+{% endblock %}

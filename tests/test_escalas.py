@@ -401,3 +401,29 @@ def test_restricao_com_data_suspeita_avisa_mas_cadastra():
     assert resposta.status_code == 302
     assert len(c.fs.docs('restricoes')) == 1
     assert any('já passou' in texto for texto in c.flashes(client))
+
+
+def test_tela_mostra_conflito_do_ajudante():
+    c = Cenario()
+    acolitos, coroinhas = c.elenco()
+    quando = proxima_data(6)
+    a = c.ajudante('Ajudante Impedido')
+    c.missa_completa(quando, acolitos + coroinhas, ajudante_id=a)
+    c.restricao_ajudante(a, quando, 'Manhã')
+    pagina = c.cliente().get('/escalas').get_data(as_text=True)
+    assert '1 conflito(s) nas missas futuras' in pagina
+    assert f'Conflito: restrição Manhã em {quando:%d/%m}' in pagina
+
+
+def test_paginas_abrem_e_mostram_avisos_no_layout():
+    c = Cenario()
+    acolitos, coroinhas = c.elenco()
+    quando = proxima_data(6)
+    missa = c.missa_completa(quando, acolitos + coroinhas)
+    client = c.cliente()
+    _editar(c, client, missa, quando + timedelta(days=7))  # gera o aviso de "escala removida"
+    pagina = client.get('/missas').get_data(as_text=True)
+    assert 'a escala antiga foi removida' in pagina
+    assert 'alert-warning' in pagina
+    for url in ('/', '/ajudantes', '/escalas', f'/coroinha/{coroinhas[0]}/restricoes'):
+        assert client.get(url).status_code == 200, url

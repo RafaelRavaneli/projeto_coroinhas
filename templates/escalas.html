@@ -1,189 +1,162 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escalas Geradas</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/style.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <style>
-        @media print {
-            .navbar, .btn, form, .esconder-no-pdf, .caixa-whatsapp { display: none !important; }
-            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-            body { background-color: white !important; }
-            .card { border: 1px solid #ddd !important; box-shadow: none !important; margin-bottom: 20px !important; break-inside: avoid; }
-            .conflito { border-left: 0 !important; background-color: transparent !important; }
-            .pdf-titulo::before { content: "Escala Oficial - Paróquia Santo Antônio"; display: block; font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 20px; color: black; }
-        }
-    </style>
-</head>
-<body class="bg-light pdf-titulo">
+{% extends 'base.html' %}
+{% from '_ui.html' import icon %}
+{% block title %}Escalas{% endblock %}
+{% block print_title %}Escala oficial · Paróquia Santo Antônio{% endblock %}
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-    <div class="container">
-        <span class="navbar-brand">Paróquia Santo Antônio</span>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu" aria-controls="navMenu" aria-expanded="false" aria-label="Abrir menu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navMenu">
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/">Coroinhas</a>
-                <a class="nav-link" href="/ajudantes">Ajudantes</a>
-                <a class="nav-link" href="/missas">Missas</a>
-                <a class="nav-link active" href="/escalas">Escalas</a>
-                <form action="{{ url_for('logout') }}" method="POST" class="d-inline ms-lg-2">
-                    <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="nav-link border-0 bg-transparent">Sair</button>
-                </form>
-            </div>
-        </div>
+{% block content %}
+{# Resumo do período filtrado #}
+{% set ns = namespace(vagas=0, preenchidas=0, sem_resp=0, sem_escala=0) %}
+{% for missa in missas %}
+    {% set total = (moldes.get(missa.tipo_missa) or [])|length %}
+    {% set feitas = missa.escalas|length %}
+    {% set ns.vagas = ns.vagas + total %}
+    {% set ns.preenchidas = ns.preenchidas + ([feitas, total]|min) %}
+    {% if not feitas %}{% set ns.sem_escala = ns.sem_escala + 1 %}{% elif not missa.ajudante %}{% set ns.sem_resp = ns.sem_resp + 1 %}{% endif %}
+{% endfor %}
+{% set em_aberto = ns.vagas - ns.preenchidas %}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Escalas</p>
+        <h1>Escalas das missas</h1>
     </div>
-</nav>
-
-<div class="container">
-    {% include '_avisos.html' %}
-    <div class="d-flex justify-content-between align-items-center mb-3 esconder-no-pdf flex-wrap gap-2">
-        <h2 class="text-primary m-0">Escalas de Missas</h2>
-        <div class="d-flex gap-2 flex-wrap">
-            <form action="/escala/gerar" method="POST" class="m-0"{% if total_conflitos %} onsubmit="return confirm('Serão removidos {{ total_conflitos }} escalado(s) em conflito e as vagas serão preenchidas de novo. O restante da escala não muda. Continuar?');"{% endif %}>
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-success fw-bold shadow-sm">⚙️ Gerar / Corrigir</button>
-            </form>
-            <button onclick="window.print()" class="btn btn-dark fw-bold shadow-sm">🖨️ Salvar PDF</button>
-        </div>
-    </div>
-
-    {% if total_conflitos %}
-    <div class="alert alert-danger d-print-none" role="alert">
-        <strong>⚠️ {{ total_conflitos }} conflito(s) nas missas futuras.</strong>
-        Há pessoas escaladas que têm restrição de data/período, função proibida ou grau incompatível.
-        Use <em>Gerar / Corrigir</em> para removê-las e preencher as vagas com quem pode.
-    </div>
-    {% endif %}
-
-    <form method="GET" action="/escalas" class="row g-2 mb-4 justify-content-center bg-white p-3 rounded shadow-sm border esconder-no-pdf">
-        <div class="col-md-auto d-flex align-items-center"><strong>📅 Filtrar:</strong></div>
-        <div class="col-md-3"><input type="date" class="form-control" name="data_inicio" value="{{ data_inicio or '' }}"></div>
-        <div class="col-md-3"><input type="date" class="form-control" name="data_fim" value="{{ data_fim or '' }}"></div>
-        <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Buscar</button></div>
-        <div class="col-md-2"><a href="/escalas" class="btn btn-outline-secondary w-100">Limpar</a></div>
-    </form>
-
-    <!-- Caixa Geradora de WhatsApp -->
-    <div class="card shadow-sm mb-4 border-success esconder-no-pdf caixa-whatsapp">
-        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <h5 class="mb-0">📱 Mensagem para o WhatsApp (Filtro Atual)</h5>
-            <button onclick="copiarTexto()" class="btn btn-light btn-sm fw-bold">Copiar Texto</button>
-        </div>
-        <div class="card-body p-0">
-            <textarea id="textoZap" class="form-control border-0" rows="6" style="resize: none;" readonly>{{ texto_whatsapp }}</textarea>
-        </div>
-    </div>
-
-    <!-- Lista de Escalas -->
-    <div class="row">
-        {% for missa in missas %}
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm h-100 border-primary border-opacity-25">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5 class="mb-0">{{ missa.descricao }}</h5>
-                        <small>{{ missa.data_hora.strftime('%d/%m/%Y às %H:%M') }} | {{ missa.tipo_missa }}</small>
-                    </div>
-                    {% if missa.escalas %}
-                    <form action="/escala/regerar/{{ missa.id }}" method="POST" class="esconder-no-pdf">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-warning btn-sm fw-bold">Refazer</button>
-                    </form>
-                    {% endif %}
-                </div>
-
-                <div class="card-body p-0">
-                    {% if missa.escalas %}
-                        {% set chegada = missa.data_hora.strftime('%H:%M') %}
-                        {% set motivos_ajudante = conflitos_ajudantes.get(missa.id) %}
-                        <div class="bg-light p-3 border-bottom text-center{% if motivos_ajudante %} conflito border-start border-danger border-4{% endif %}">
-                            <span class="badge bg-success mb-1">Ajudante (Responsável)</span>
-                            <h6 class="m-0 text-dark fw-bold d-flex justify-content-center align-items-center gap-2">
-                                {{ missa.ajudante.nome if missa.ajudante else 'EM ABERTO' }}
-                                {% if missa.ajudante and missa.ajudante.telefone %}
-                                    {% set msg_ajudante = 'Olá ' ~ missa.ajudante.nome ~ '! Você foi escalado(a) como *Responsável* pela missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ '. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
-                                    <a href="https://wa.me/{{ missa.ajudante.telefone|wa_link }}?text={{ msg_ajudante|urlencode }}"
-                                       target="_blank" class="btn btn-success btn-sm fw-bold esconder-no-pdf"
-                                       title="Notificar {{ missa.ajudante.nome }} via WhatsApp">📲</a>
-                                {% endif %}
-                            </h6>
-                            {% if motivos_ajudante %}
-                            <div class="text-danger small fw-bold d-print-none">⚠️ Conflito: {{ motivos_ajudante|join('; ') }}</div>
-                            {% endif %}
-                        </div>
-                        <ul class="list-group list-group-flush">
-                            {% for escala in missa.escalas %}
-                            {% set tel_jovem = escala.coroinha.telefone_jovem %}
-                            {% set msg_jovem = 'Olá ' ~ escala.coroinha.nome ~ '! Você foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
-                            {% set msg_resp1 = 'Olá ' ~ escala.coroinha.responsavel_nome ~ '! ' ~ escala.coroinha.nome ~ ' foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
-                            {% if escala.coroinha.responsavel2_telefone %}
-                            {% set msg_resp2 = 'Olá ' ~ (escala.coroinha.responsavel2_nome or 'responsável') ~ '! ' ~ escala.coroinha.nome ~ ' foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
-                            {% endif %}
-                            {% set motivos = conflitos_escalas.get(escala.id) %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-1{% if motivos %} conflito border-start border-danger border-4 list-group-item-danger{% endif %}">
-                                <div>
-                                    <strong>{{ escala.coroinha.nome }}</strong>
-                                    <span class="badge bg-secondary ms-1">{{ escala.funcao_atribuida }}</span><br>
-                                    <small class="text-muted">Resp.: {{ escala.coroinha.responsavel_nome }}</small>
-                                    {% if motivos %}
-                                    <div class="text-danger small fw-bold d-print-none">⚠️ Conflito: {{ motivos|join('; ') }}</div>
-                                    {% endif %}
-                                </div>
-                                <div class="esconder-no-pdf d-flex gap-1">
-                                    {% if tel_jovem %}
-                                    <a href="https://wa.me/{{ tel_jovem|wa_link }}?text={{ msg_jovem|urlencode }}"
-                                       target="_blank" class="btn btn-success btn-sm fw-bold"
-                                       title="Notificar {{ escala.coroinha.nome }} via WhatsApp">📲</a>
-                                    {% endif %}
-
-                                    {% if escala.coroinha.responsavel_telefone %}
-                                    <a href="https://wa.me/{{ escala.coroinha.responsavel_telefone|wa_link }}?text={{ msg_resp1|urlencode }}"
-                                       target="_blank" class="btn btn-outline-primary btn-sm fw-bold"
-                                       title="Notificar Responsável 1 ({{ escala.coroinha.responsavel_nome }}) via WhatsApp">👨‍👩‍👧</a>
-                                    {% endif %}
-
-                                    {% if escala.coroinha.responsavel2_telefone %}
-                                    <a href="https://wa.me/{{ escala.coroinha.responsavel2_telefone|wa_link }}?text={{ msg_resp2|urlencode }}"
-                                       target="_blank" class="btn btn-outline-primary btn-sm fw-bold"
-                                       title="Notificar Responsável 2 ({{ escala.coroinha.responsavel2_nome }}) via WhatsApp">👨‍👩‍👧</a>
-                                    {% endif %}
-
-                                    <form action="/escala/deletar/{{ escala.id }}" method="POST" onsubmit="return confirm('Remover jovem desta escala?');">
-                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-                                        <button type="submit" class="btn btn-outline-danger btn-sm fw-bold" aria-label="Remover {{ escala.coroinha.nome }} da escala">Remover</button>
-                                    </form>
-                                </div>
-                            </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <div class="p-4 text-center text-muted"><i>Escala ainda não gerada.</i></div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        {% endfor %}
+    <div class="actions">
+        <button class="btn" type="button" onclick="window.print()">{{ icon('print') }} Salvar PDF</button>
+        <form action="{{ url_for('gerar_escala_automatica') }}" method="POST"{% if total_conflitos %} data-confirm="Serão removidos {{ total_conflitos }} escalado(s) em conflito e as vagas serão preenchidas de novo. O restante da escala não muda. Continuar?"{% endif %}>
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-primary btn-block" data-busy="Gerando escalas…">{{ icon('spark') }} <span data-label>Gerar / corrigir escala</span></button>
+        </form>
     </div>
 </div>
 
-<script>
-function copiarTexto() {
-    var copyText = document.getElementById("textoZap");
-    copyText.select();
-    copyText.setSelectionRange(0, 99999);
-    navigator.clipboard.writeText(copyText.value);
-    alert("Mensagem copiada! Cole no WhatsApp.");
-}
-</script>
-</body>
-</html>
+{% if total_conflitos %}
+<div class="alert alert-error no-print" role="alert">
+    {{ icon('alert') }}
+    <span><strong>{{ total_conflitos }} conflito(s) nas missas futuras.</strong>
+    Há pessoas escaladas com restrição de data/período, função proibida ou grau incompatível.
+    Use “Gerar / corrigir escala” para removê-las e preencher as vagas com quem pode.</span>
+</div>
+{% endif %}
+
+{% if missas %}
+<dl class="stats">
+    <div class="stat"><dt>Missas no período</dt><dd>{{ missas|length }}</dd></div>
+    <div class="stat"><dt>Funções preenchidas</dt><dd>{{ ns.preenchidas }} de {{ ns.vagas }}</dd></div>
+    <div class="stat{% if em_aberto %} is-warn{% endif %}"><dt>Vagas em aberto</dt><dd>{{ em_aberto }}</dd></div>
+    <div class="stat{% if ns.sem_escala %} is-warn{% endif %}"><dt>Missas sem escala</dt><dd>{{ ns.sem_escala }}</dd></div>
+</dl>
+{% endif %}
+
+<form method="GET" action="{{ url_for('escalas') }}" class="toolbar" id="filtro" aria-label="Filtrar período">
+    <div class="inline-field"><label for="data_inicio">De</label><input class="input" type="date" id="data_inicio" name="data_inicio" value="{{ data_inicio or '' }}"></div>
+    <div class="inline-field"><label for="data_fim">Até</label><input class="input" type="date" id="data_fim" name="data_fim" value="{{ data_fim or '' }}"></div>
+    <button type="submit" class="btn">Filtrar</button>
+    {% if data_inicio or data_fim %}<a href="{{ url_for('escalas') }}" class="btn">Limpar</a>{% endif %}
+    <div class="chips push" role="group" aria-label="Atalhos de período">
+        <button class="chip" type="button" data-range="weekend" data-form="filtro">Próximo fim de semana</button>
+        <button class="chip" type="button" data-range="two-weeks" data-form="filtro">Próximas 2 semanas</button>
+        <button class="chip" type="button" data-range="month" data-form="filtro">Este mês</button>
+    </div>
+</form>
+
+<details class="wa-box">
+    <summary>
+        <span class="wa-icon">{{ icon('chat', 18) }}</span>
+        <span>
+            <span class="wa-title">Mensagem para o grupo do WhatsApp</span>
+            <span class="wa-sub">Escala do período filtrado, pronta para colar</span>
+        </span>
+        <span class="chev">{{ icon('chev', 18) }}</span>
+    </summary>
+    <div class="wa-body">
+        <label class="sr-only" for="textoZap">Texto da mensagem</label>
+        <textarea id="textoZap" readonly>{{ texto_whatsapp }}</textarea>
+        <div class="form-actions"><button class="btn" type="button" data-copy="textoZap" aria-live="polite">Copiar mensagem</button></div>
+    </div>
+</details>
+
+{% for grupo in agrupar_por_fim_de_semana(missas) %}
+<section class="group" aria-labelledby="grupo-{{ loop.index }}">
+    <div class="group-head">
+        <h2 id="grupo-{{ loop.index }}">{{ grupo.rotulo }}</h2>
+        <span>{{ grupo.missas|length }} {{ 'missa' if grupo.missas|length == 1 else 'missas' }}</span>
+    </div>
+    <div class="mass-grid">
+    {% for missa in grupo.missas %}
+        {% set molde = moldes.get(missa.tipo_missa) or [] %}
+        {% set escalas_missa = missa.escalas %}
+        {% set funcoes_molde = molde|map(attribute='funcao')|list %}
+        {% set preenchidas = escalas_missa|selectattr('funcao_atribuida', 'in', funcoes_molde)|list|length %}
+        {% set abertas = molde|length - preenchidas %}
+        {% set quando = missa.data_hora.strftime('%d/%m/%Y') ~ ' às ' ~ missa.data_hora.strftime('%H:%M') %}
+        <article class="mass">
+            <div class="mass-head">
+                <div class="date-chip" aria-hidden="true">
+                    <span class="dow">{{ missa.data_hora|dia_curto }}</span>
+                    <span class="day">{{ missa.data_hora.strftime('%d') }}</span>
+                    <span class="mon">{{ missa.data_hora|mes_curto }}</span>
+                </div>
+                <div class="mass-info">
+                    <h3>{{ missa.descricao }}</h3>
+                    <div class="meta">
+                        <span class="sr-only">{{ missa.data_hora|data_extenso }},</span>
+                        <span>{{ missa.data_hora|hora }} · chegar até {{ missa.data_hora|chegada }}</span>
+                        <span class="badge {{ 'badge-gold' if missa.tipo_missa in ('Solene', 'Bispo') else '' }}">{{ missa.tipo_missa }}</span>
+                        {% if escalas_missa and abertas > 0 %}<span class="badge badge-open">{{ abertas }} {{ 'vaga' if abertas == 1 else 'vagas' }} em aberto</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if escalas_missa %}
+                {% set motivos_ajudante = conflitos_ajudantes.get(missa.id) %}
+                {% if missa.ajudante %}
+                {% set msg_ajudante = 'Olá ' ~ missa.ajudante.nome ~ '! Você foi escalado(a) como *Responsável* pela missa "' ~ missa.descricao ~ '" no dia ' ~ quando ~ '. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
+                <div class="helper{% if motivos_ajudante %} is-conflict{% endif %}">
+                    <div><div class="label">Responsável</div><div class="name">{{ missa.ajudante.nome }}</div>
+                    {% if motivos_ajudante %}<div class="reason no-print">Conflito: {{ motivos_ajudante|join('; ') }}</div>{% endif %}</div>
+                    {% if missa.ajudante.telefone and missa.ajudante.telefone|wa_link %}
+                    <a class="icon-btn wa" href="https://wa.me/{{ missa.ajudante.telefone|wa_link }}?text={{ msg_ajudante|urlencode }}" target="_blank" rel="noopener" aria-label="Avisar {{ missa.ajudante.nome }} pelo WhatsApp" title="Avisar pelo WhatsApp">{{ icon('chat') }}</a>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="helper is-open"><div><div class="label">Responsável</div><div class="name">Em aberto</div></div></div>
+                {% endif %}
+
+                <ul class="roles">
+                {% for item in molde %}
+                    {% set escala = escalas_missa|selectattr('funcao_atribuida', 'equalto', item.funcao)|first %}
+                    {% include '_escala_linha.html' %}
+                {% endfor %}
+                {% for escala in escalas_missa if escala.funcao_atribuida not in funcoes_molde %}
+                    {% set item = {'funcao': escala.funcao_atribuida} %}
+                    {% include '_escala_linha.html' %}
+                {% endfor %}
+                </ul>
+
+                <div class="mass-foot">
+                    <span>{{ preenchidas }} de {{ molde|length }} funções</span>
+                    <form action="{{ url_for('regerar_escala', id=missa.id) }}" method="POST" data-confirm="Refazer a escala de “{{ missa.descricao }}”? Os escalados atuais desta missa serão substituídos.">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="link-btn" data-busy="Refazendo…">{{ icon('refresh', 14) }} <span data-label>Refazer escala</span></button>
+                    </form>
+                </div>
+            {% else %}
+                <div class="empty">
+                    <p>A escala desta missa ainda não foi gerada.</p>
+                    <form action="{{ url_for('gerar_escala_automatica') }}" method="POST">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-primary" data-busy="Gerando escalas…">{{ icon('spark') }} <span data-label>Gerar escalas pendentes</span></button>
+                    </form>
+                </div>
+            {% endif %}
+        </article>
+    {% endfor %}
+    </div>
+</section>
+{% else %}
+<div class="empty-page">
+    <h2>Nenhuma missa neste período</h2>
+    <p>Ajuste as datas do filtro ou cadastre missas na página <a href="{{ url_for('missas') }}">Missas</a>.</p>
+</div>
+{% endfor %}
+{% endblock %}
