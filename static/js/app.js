@@ -110,6 +110,21 @@
     });
   });
 
+  // Restrição por horário exato: mostra o campo de horário só quando "Só um horário" é escolhido
+  document.querySelectorAll('select[data-periodo]').forEach(function (select) {
+    var campo = select.form && select.form.querySelector('[data-horario]');
+    if (!campo) return;
+    var atualizar = function () {
+      var ativo = select.value === 'Horário';
+      campo.hidden = !ativo;
+      campo.disabled = !ativo;
+      campo.required = ativo;
+      if (ativo && document.activeElement === select) campo.focus();
+    };
+    select.addEventListener('change', atualizar);
+    atualizar();
+  });
+
   // Atalhos de período: <button data-range="weekend|two-weeks|month" data-form="idDoForm">
   function iso(d) {
     var m = String(d.getMonth() + 1).padStart(2, '0');

@@ -61,10 +61,12 @@ class Cenario:
                                       'funcao_atribuida': funcao, 'status': 'Confirmado'})
         return id
 
-    def restricao(self, coroinha_id, quando, periodo='Dia Todo'):
+    def restricao(self, coroinha_id, quando, periodo='Dia Todo', horario=None):
         id = self._id(None)
-        self.fs.seed('restricoes', id, {'id': id, 'coroinha_id': coroinha_id,
-                                         'data_exata': quando.date().isoformat(), 'periodo': periodo})
+        dados = {'id': id, 'coroinha_id': coroinha_id, 'data_exata': quando.date().isoformat(), 'periodo': periodo}
+        if horario:
+            dados['horario'] = horario
+        self.fs.seed('restricoes', id, dados)
         return id
 
     def restricao_funcao(self, coroinha_id, funcao):
@@ -78,10 +80,12 @@ class Cenario:
                                         'coroinhas_vinculados_ids': list(filhos)})
         return id
 
-    def restricao_ajudante(self, ajudante_id, quando, periodo='Dia Todo'):
+    def restricao_ajudante(self, ajudante_id, quando, periodo='Dia Todo', horario=None):
         id = self._id(None)
-        self.fs.seed('restricoes_ajudantes', id, {'id': id, 'ajudante_id': ajudante_id,
-                                                   'data_exata': quando.date().isoformat(), 'periodo': periodo})
+        dados = {'id': id, 'ajudante_id': ajudante_id, 'data_exata': quando.date().isoformat(), 'periodo': periodo}
+        if horario:
+            dados['horario'] = horario
+        self.fs.seed('restricoes_ajudantes', id, dados)
         return id
 
     def escala_ajudante(self, missa_id, ajudante_id):

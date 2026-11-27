@@ -10,7 +10,9 @@ from flask import Flask, abort, flash, redirect, render_template, request, sessi
 from werkzeug.security import check_password_hash
 from firestore_repository import FirestoreRepository
 from conflitos import (
+    HORARIO_ESPECIFICO,
     conflitos_da_escala,
+    descricao_restricao,
     motivos_conflito_ajudante,
     motivos_conflito_coroinha,
 )
@@ -55,7 +57,7 @@ def save_record(record):
 def create_record(model, **values):
     return store.create(model, **values)
 
-PERIODOS = {'Manhã', 'Tarde', 'Noite', 'Dia Todo'}
+PERIODOS = {'Manhã', 'Tarde', 'Noite', 'Dia Todo', HORARIO_ESPECIFICO}
 
 
 def csrf_token():
@@ -182,6 +184,26 @@ def validated_period():
     if period not in PERIODOS:
         abort(400, description='Selecione um período válido.')
     return period
+
+
+def validated_horario(periodo):
+    """Horário 'HH:MM' obrigatório quando o período é Horário específico; None nos demais."""
+    if periodo != HORARIO_ESPECIFICO:
+        return None
+    valor = (request.form.get('horario') or '').strip()[:5]
+    try:
+        return datetime.strptime(valor, '%H:%M').strftime('%H:%M')
+    except ValueError:
+        abort(400, description='Informe o horário da missa em que a pessoa não pode servir (ex.: 08:00).')
+
+
+app.add_template_filter(descricao_restricao, 'descricao_restricao')
+
+
+@app.template_global()
+def horarios_das_missas():
+    """Horários ('HH:MM') das missas cadastradas, para sugerir no campo de horário."""
+    return sorted({missa.data_hora.strftime('%H:%M') for missa in store.all(Missa)})
 
 
 def avisar_se_data_suspeita(data):
@@ -429,7 +451,8 @@ def deletar_ajudante(id):
 def nova_restricao_ajudante(id):
     get_record(Ajudante, id)
     data = parsed_date(request.form.get('data_exata'), 'Data')
-    create_record(RestricaoAjudante, data_exata=data.isoformat(), periodo=validated_period(), ajudante_id=id)
+    periodo = validated_period()
+    create_record(RestricaoAjudante, data_exata=data.isoformat(), periodo=periodo, horario=validated_horario(periodo), ajudante_id=id)
     avisar_se_data_suspeita(data)
     flash('Restrição cadastrada. Escalas já geradas não mudam sozinhas: use "Gerar / Corrigir" na tela de Escalas.', 'info')
     return redirect(url_for('ajudantes'))
@@ -528,7 +551,8 @@ def restricoes(id):
 def nova_restricao_data(id):
     get_record(Coroinha, id)
     data = parsed_date(request.form.get('data_exata'), 'Data')
-    create_record(Restricao, data_exata=data.isoformat(), periodo=validated_period(), coroinha_id=id)
+    periodo = validated_period()
+    create_record(Restricao, data_exata=data.isoformat(), periodo=periodo, horario=validated_horario(periodo), coroinha_id=id)
     avisar_se_data_suspeita(data)
     flash('Restrição cadastrada. Escalas já geradas não mudam sozinhas: use "Gerar / Corrigir" na tela de Escalas.', 'info')
     return redirect(url_for('restricoes', id=id))
