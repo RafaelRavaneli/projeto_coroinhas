@@ -1,3 +1,4 @@
+import hashlib
 import random
 import hmac
 import os
@@ -71,10 +72,21 @@ def inject_csrf_token():
 
 
 def _asset_version():
-    """Muda quando CSS ou JS mudam, para o navegador não usar arquivo antigo do cache."""
+    """Muda quando CSS ou JS mudam, para o navegador não usar arquivo antigo do cache.
+
+    Usa o conteúdo dos arquivos, não a data: na Vercel todos os arquivos
+    publicados têm a mesma data de modificação em qualquer deploy.
+    """
     pasta = os.path.join(app.root_path, 'static')
-    datas = [os.path.getmtime(os.path.join(raiz, nome)) for raiz, _, nomes in os.walk(pasta) for nome in nomes]
-    return str(int(max(datas))) if datas else '1'
+    resumo = hashlib.sha256()
+    for raiz, pastas, nomes in os.walk(pasta):
+        pastas.sort()
+        for nome in sorted(nomes):
+            caminho = os.path.join(raiz, nome)
+            resumo.update(os.path.relpath(caminho, pasta).encode('utf-8'))
+            with open(caminho, 'rb') as arquivo:
+                resumo.update(arquivo.read())
+    return resumo.hexdigest()[:10]
 
 
 ASSET_VERSION = _asset_version()
