@@ -22,12 +22,21 @@
     </div>
     <div class="actions">
         <button class="btn" type="button" onclick="window.print()">{{ icon('print') }} Salvar PDF</button>
-        <form action="{{ url_for('gerar_escala_automatica') }}" method="POST">
+        <form action="{{ url_for('gerar_escala_automatica') }}" method="POST"{% if total_conflitos %} data-confirm="Serão removidos {{ total_conflitos }} escalado(s) em conflito e as vagas serão preenchidas de novo. O restante da escala não muda. Continuar?"{% endif %}>
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-primary btn-block" data-busy="Gerando escalas…">{{ icon('spark') }} <span data-label>Gerar escalas pendentes</span></button>
+            <button type="submit" class="btn btn-primary btn-block" data-busy="Gerando escalas…">{{ icon('spark') }} <span data-label>Gerar / corrigir escala</span></button>
         </form>
     </div>
 </div>
+
+{% if total_conflitos %}
+<div class="alert alert-error no-print" role="alert">
+    {{ icon('alert') }}
+    <span><strong>{{ total_conflitos }} conflito(s) nas missas futuras.</strong>
+    Há pessoas escaladas com restrição de data/período, função proibida ou grau incompatível.
+    Use “Gerar / corrigir escala” para removê-las e preencher as vagas com quem pode.</span>
+</div>
+{% endif %}
 
 {% if missas %}
 <dl class="stats">
@@ -99,10 +108,12 @@
             </div>
 
             {% if escalas_missa %}
+                {% set motivos_ajudante = conflitos_ajudantes.get(missa.id) %}
                 {% if missa.ajudante %}
                 {% set msg_ajudante = 'Olá ' ~ missa.ajudante.nome ~ '! Você foi escalado(a) como *Responsável* pela missa "' ~ missa.descricao ~ '" no dia ' ~ quando ~ '. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
-                <div class="helper">
-                    <div><div class="label">Responsável</div><div class="name">{{ missa.ajudante.nome }}</div></div>
+                <div class="helper{% if motivos_ajudante %} is-conflict{% endif %}">
+                    <div><div class="label">Responsável</div><div class="name">{{ missa.ajudante.nome }}</div>
+                    {% if motivos_ajudante %}<div class="reason no-print">Conflito: {{ motivos_ajudante|join('; ') }}</div>{% endif %}</div>
                     {% if missa.ajudante.telefone and missa.ajudante.telefone|wa_link %}
                     <a class="icon-btn wa" href="https://wa.me/{{ missa.ajudante.telefone|wa_link }}?text={{ msg_ajudante|urlencode }}" target="_blank" rel="noopener" aria-label="Avisar {{ missa.ajudante.nome }} pelo WhatsApp" title="Avisar pelo WhatsApp">{{ icon('chat') }}</a>
                     {% endif %}
@@ -124,10 +135,14 @@
 
                 <div class="mass-foot">
                     <span>{{ preenchidas }} de {{ molde|length }} funções</span>
+                    {% if agora is defined and missa.data_hora < agora %}
+                    <span>Missa realizada</span>
+                    {% else %}
                     <form action="{{ url_for('regerar_escala', id=missa.id) }}" method="POST" data-confirm="Refazer a escala de “{{ missa.descricao }}”? Os escalados atuais desta missa serão substituídos.">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="link-btn" data-busy="Refazendo…">{{ icon('refresh', 14) }} <span data-label>Refazer escala</span></button>
                     </form>
+                    {% endif %}
                 </div>
             {% else %}
                 <div class="empty">

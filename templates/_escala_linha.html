@@ -2,12 +2,14 @@
 {% from '_ui.html' import icon %}
 {% if escala and escala.coroinha %}
 {% set c = escala.coroinha %}
+{% set motivos = conflitos_escalas.get(escala.id) if conflitos_escalas else None %}
 {% set base_msg = ' foi escalado(a) para a missa "' ~ missa.descricao ~ '" no dia ' ~ quando ~ ', na função de *' ~ escala.funcao_atribuida ~ '*. Favor chegar com 30 minutos de antecedência. Por favor confirme com um OK 👍' %}
-<li class="role">
+<li class="role{% if motivos %} is-conflict{% endif %}">
     <span class="role-name">{{ item.funcao }}</span>
     <div class="person">
         <strong>{{ c.nome }}</strong>
         <small>Resp.: {{ c.responsavel_nome }}</small>
+        {% if motivos %}<small class="reason no-print">Conflito: {{ motivos|join('; ') }}</small>{% endif %}
     </div>
     <details class="menu">
         <summary class="icon-btn" aria-label="Ações para {{ c.nome }}" title="Avisar ou remover">{{ icon('more') }}</summary>

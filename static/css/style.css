@@ -472,3 +472,19 @@ details[open] > summary .chev { transform: rotate(180deg); }
   .table tbody tr:hover { background: none; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Mensagens depois de uma ação e conflitos de escala */
+.alerts { display: grid; gap: 8px; margin: 0 0 16px; }
+.alert svg { flex: none; margin-top: 2px; }
+.alert-info { background: var(--gold-tint); color: var(--gold-ink); border: 1px solid #ecdcb0; }
+.alert-success { background: var(--green-tint); color: var(--green); border: 1px solid #c9e0d2; }
+.alert-warning { background: var(--open-tint); color: var(--open); border: 1px solid var(--open-line); }
+.page-head + .alert { margin-bottom: 16px; }
+.role.is-conflict { background: var(--danger-tint); box-shadow: inset 3px 0 0 var(--danger); }
+.person small.reason { color: var(--danger); font-weight: 600; white-space: normal; }
+.helper.is-conflict { background: var(--danger-tint); }
+.helper.is-conflict .label, .helper.is-conflict .name, .helper .reason { color: var(--danger); }
+.helper .reason { font-size: 12px; font-weight: 600; }
+@media print {
+  .role.is-conflict, .helper.is-conflict { background: none; box-shadow: none; }
+}

@@ -41,6 +41,7 @@
 
 <main id="conteudo" class="wrap page">
     <p class="print-title">{% block print_title %}Paróquia Santo Antônio{% endblock %}</p>
+    {% include '_avisos.html' %}
     {% block content %}{% endblock %}
 </main>
 {% endblock %}

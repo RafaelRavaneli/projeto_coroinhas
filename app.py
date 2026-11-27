@@ -3,10 +3,16 @@ import hmac
 import os
 import secrets
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import re
-from flask import Flask, abort, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 from firestore_repository import FirestoreRepository
+from conflitos import (
+    conflitos_da_escala,
+    motivos_conflito_ajudante,
+    motivos_conflito_coroinha,
+)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET_KEY') or secrets.token_hex(32)
@@ -26,6 +32,15 @@ RestricaoFuncao = 'RestricaoFuncao'
 Missa = 'Missa'
 Escala = 'Escala'
 EscalaAjudante = 'EscalaAjudante'
+
+
+# As missas são gravadas no horário de Brasília (sem fuso). O servidor da Vercel
+# roda em UTC, então "agora" precisa ser calculado no fuso da paróquia.
+FUSO_PAROQUIA = ZoneInfo('America/Sao_Paulo')
+
+
+def agora_local():
+    return datetime.now(FUSO_PAROQUIA).replace(tzinfo=None)
 
 
 def get_record(model, document_id):
@@ -155,6 +170,15 @@ def validated_period():
     if period not in PERIODOS:
         abort(400, description='Selecione um período válido.')
     return period
+
+
+def avisar_se_data_suspeita(data):
+    """Avisa (sem bloquear) quando a restrição cadastrada está no passado ou muito distante."""
+    hoje = agora_local().date()
+    if data < hoje:
+        flash(f'Atenção: a data {data:%d/%m/%Y} já passou. Confira se o ano está correto.', 'warning')
+    elif data > hoje + timedelta(days=183):
+        flash(f'Atenção: a data {data:%d/%m/%Y} está a mais de 6 meses. Confira se o ano está correto.', 'warning')
 
 
 def validated_coroinhas(field='coroinhas_vinculados'):
@@ -392,7 +416,10 @@ def deletar_ajudante(id):
 @app.route('/ajudante/<id>/restricao/nova', methods=['POST'])
 def nova_restricao_ajudante(id):
     get_record(Ajudante, id)
-    create_record(RestricaoAjudante, data_exata=parsed_date(request.form.get('data_exata'), 'Data').isoformat(), periodo=validated_period(), ajudante_id=id)
+    data = parsed_date(request.form.get('data_exata'), 'Data')
+    create_record(RestricaoAjudante, data_exata=data.isoformat(), periodo=validated_period(), ajudante_id=id)
+    avisar_se_data_suspeita(data)
+    flash('Restrição cadastrada. Escalas já geradas não mudam sozinhas: use "Gerar / Corrigir" na tela de Escalas.', 'info')
     return redirect(url_for('ajudantes'))
 
 
@@ -434,16 +461,41 @@ def nova_missa():
     )
     return redirect(url_for('missas'))
 
+def limpar_escala_da_missa(missa):
+    """Remove escalados e ajudante da missa (como regerar_escala já fazia)."""
+    for escala in store.all(Escala, missa_id=missa.id):
+        store.delete(Escala, escala.id)
+    for escala in store.all(EscalaAjudante, missa_id=missa.id):
+        store.delete(EscalaAjudante, escala.id)
+    missa.ajudante_id = None
+
+
 @app.route('/missa/editar/<id>', methods=['POST'])
 def editar_missa(id):
     m = get_record(Missa, id)
     tipo_missa = request.form.get('tipo_missa')
     if tipo_missa not in MOLDES_LITURGICOS:
         abort(400, description='Selecione um tipo de celebração válido.')
-    m.descricao = required_text('descricao', 'Descrição', 100)
+    descricao = required_text('descricao', 'Descrição', 100)
+    nova_data_hora = parsed_datetime(request.form.get('data_hora'), 'Data e hora')
+
+    # Data/hora ou tipo mudaram: a escala antiga foi montada para outra celebração
+    # e as restrições não foram verificadas para a nova. Descartar e pedir nova geração.
+    mudou = nova_data_hora != m.data_hora or tipo_missa != m.tipo_missa
+    tinha_escala = bool(store.all(Escala, missa_id=m.id) or store.all(EscalaAjudante, missa_id=m.id) or m.ajudante_id)
+    if mudou:
+        limpar_escala_da_missa(m)
+
+    m.descricao = descricao
     m.tipo_missa = tipo_missa
-    m.data_hora = parsed_datetime(request.form.get('data_hora'), 'Data e hora')
+    m.data_hora = nova_data_hora
     save_record(m)
+    if mudou and tinha_escala:
+        flash(
+            f'A data ou o tipo de "{descricao}" mudou, então a escala antiga foi removida. '
+            'Vá em Escalas e use "Gerar / Corrigir" para montar a nova.',
+            'warning',
+        )
     return redirect(url_for('missas'))
 
 @app.route('/missa/deletar/<id>', methods=['POST'])
@@ -463,7 +515,10 @@ def restricoes(id):
 @app.route('/coroinha/<id>/restricao_data/nova', methods=['POST'])
 def nova_restricao_data(id):
     get_record(Coroinha, id)
-    create_record(Restricao, data_exata=parsed_date(request.form.get('data_exata'), 'Data').isoformat(), periodo=validated_period(), coroinha_id=id)
+    data = parsed_date(request.form.get('data_exata'), 'Data')
+    create_record(Restricao, data_exata=data.isoformat(), periodo=validated_period(), coroinha_id=id)
+    avisar_se_data_suspeita(data)
+    flash('Restrição cadastrada. Escalas já geradas não mudam sozinhas: use "Gerar / Corrigir" na tela de Escalas.', 'info')
     return redirect(url_for('restricoes', id=id))
 
 @app.route('/coroinha/<id>/restricao_funcao/nova', methods=['POST'])
@@ -474,6 +529,7 @@ def nova_restricao_funcao(id):
     if funcao not in funcoes_validas:
         abort(400, description='Selecione uma função válida.')
     create_record(RestricaoFuncao, funcao_proibida=funcao, coroinha_id=id)
+    flash('Restrição cadastrada. Escalas já geradas não mudam sozinhas: use "Gerar / Corrigir" na tela de Escalas.', 'info')
     return redirect(url_for('restricoes', id=id))
 
 @app.route('/restricao_data/deletar/<id>', methods=['POST'])
@@ -560,6 +616,46 @@ def gerar_texto_whatsapp(missas_filtradas):
     texto += "\nFavor chegar à igreja com no máximo 30 minutos de antecedência.\nAtentem-se a conversa no interior da igreja e *na sacristia*\n\nPOR FAVOR CONFIRMEM COM UM *OK* OU 👍"
     return texto
 
+def calcular_conflitos(missas):
+    """Conflitos das escalas já existentes das missas futuras.
+
+    Devolve (por_escala, por_missa_ajudante, total):
+    - por_escala: {id da Escala: [motivos]}
+    - por_missa_ajudante: {id da Missa: [motivos]} para o ajudante responsável
+    Missas passadas são ignoradas: o gerador não mexe nelas.
+    """
+    agora = agora_local()
+    coroinhas_por_id = {coroinha.id: coroinha for coroinha in store.all(Coroinha)}
+    ajudantes_por_id = {ajudante.id: ajudante for ajudante in store.all(Ajudante)}
+    escalas = store.all(Escala)
+    restricoes_coroinhas = store.all(Restricao)
+    restricoes_funcoes = store.all(RestricaoFuncao)
+    restricoes_ajudantes = store.all(RestricaoAjudante)
+
+    por_escala = {}
+    por_missa_ajudante = {}
+    for missa in missas:
+        if missa.data_hora < agora:
+            continue
+        molde = MOLDES_LITURGICOS.get(missa.tipo_missa, [])
+        for escala in escalas:
+            if str(escala.missa_id) != missa.id:
+                continue
+            motivos = conflitos_da_escala(
+                escala, missa, coroinhas_por_id.get(str(escala.coroinha_id)),
+                molde, restricoes_coroinhas, restricoes_funcoes,
+            )
+            if motivos:
+                por_escala[escala.id] = motivos
+        if missa.ajudante_id:
+            motivos = motivos_conflito_ajudante(
+                ajudantes_por_id.get(str(missa.ajudante_id)), missa, restricoes_ajudantes
+            )
+            if motivos:
+                por_missa_ajudante[missa.id] = motivos
+    return por_escala, por_missa_ajudante, len(por_escala) + len(por_missa_ajudante)
+
+
 @app.route('/escalas')
 def escalas():
     todas_missas = apply_date_filters(store.all(Missa))
@@ -568,24 +664,75 @@ def escalas():
     store.all(Coroinha)
     store.all(Ajudante)
     texto_wpp = gerar_texto_whatsapp(todas_missas)
-    
-    return render_template('escalas.html', missas=todas_missas, texto_whatsapp=texto_wpp, data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'))
+    conflitos_escalas, conflitos_ajudantes, total_conflitos = calcular_conflitos(todas_missas)
 
-def preencher_escalas_pendentes():
+    return render_template(
+        'escalas.html', missas=todas_missas, texto_whatsapp=texto_wpp,
+        data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'),
+        conflitos_escalas=conflitos_escalas, conflitos_ajudantes=conflitos_ajudantes,
+        total_conflitos=total_conflitos, agora=agora_local(),
+    )
+
+def preencher_escalas_pendentes(missa_ids=None):
+    """Corrige conflitos e preenche vagas das missas FUTURAS.
+
+    1. Remove quem está escalado em conflito (restrição de data/período,
+       função proibida, grau incompatível, função que não existe no tipo
+       atual da missa) e ajudantes em conflito. O restante da escala fica intacto.
+    2. Preenche as vagas, inclusive as abertas no passo 1.
+
+    `missa_ids` limita a geração a essas missas (usado por regerar_escala); as
+    demais missas continuam valendo como contexto da regra de um escalado por
+    fim de semana. Missas passadas nunca são alteradas.
+    Devolve contagens para a mensagem ao usuário.
+    """
+    agora = agora_local()
     missas = sorted(store.all(Missa), key=lambda missa: missa.data_hora)
+    alvo_ids = {str(i) for i in missa_ids} if missa_ids is not None else None
+    missas_alvo = [
+        m for m in missas
+        if m.data_hora >= agora and (alvo_ids is None or m.id in alvo_ids)
+    ]
     coroinhas = store.all(Coroinha)
+    coroinhas_por_id = {coroinha.id: coroinha for coroinha in coroinhas}
     ajudantes = store.all(Ajudante)
+    ajudantes_por_id = {ajudante.id: ajudante for ajudante in ajudantes}
     escalas = store.all(Escala)
     escalas_ajudantes = store.all(EscalaAjudante)
     restricoes_coroinhas = store.all(Restricao)
     restricoes_funcoes = store.all(RestricaoFuncao)
     restricoes_ajudantes = store.all(RestricaoAjudante)
- 
-    for missa in missas:
+    resultado = {'removidos': 0, 'preenchidos': 0, 'ajudantes_removidos': 0, 'ajudantes_preenchidos': 0}
+
+    # Passo 0: remover escalados em conflito de TODAS as missas alvo antes de
+    # preencher qualquer uma, para que as vagas liberadas já contem na regra
+    # de fim de semana das missas seguintes.
+    for missa in missas_alvo:
+        molde = MOLDES_LITURGICOS.get(missa.tipo_missa, [])
+        for escala in [e for e in escalas if str(e.missa_id) == missa.id]:
+            motivos = conflitos_da_escala(
+                escala, missa, coroinhas_por_id.get(str(escala.coroinha_id)),
+                molde, restricoes_coroinhas, restricoes_funcoes,
+            )
+            if motivos:
+                store.delete(Escala, escala.id)
+                escalas.remove(escala)
+                resultado['removidos'] += 1
+        if missa.ajudante_id:
+            motivos = motivos_conflito_ajudante(
+                ajudantes_por_id.get(str(missa.ajudante_id)), missa, restricoes_ajudantes
+            )
+            if motivos:
+                for ea in [e for e in escalas_ajudantes if str(e.missa_id) == missa.id]:
+                    store.delete(EscalaAjudante, ea.id)
+                    escalas_ajudantes.remove(ea)
+                missa.ajudante_id = None
+                save_record(missa)
+                resultado['ajudantes_removidos'] += 1
+
+    for missa in missas_alvo:
         funcoes_da_missa = MOLDES_LITURGICOS.get(missa.tipo_missa, [])
-        hora = missa.data_hora.hour
-        periodo_missa = 'Manhã' if hora < 12 else 'Tarde' if hora < 18 else 'Noite'
- 
+
         # Quem já está escalado em OUTRA missa deste mesmo fim de semana
         outras = [
             outra for outra in missas
@@ -600,35 +747,35 @@ def preencher_escalas_pendentes():
                 str(e.coroinha_id) for e in escalas if str(e.missa_id) in ids_outras
             }
         ajudantes_ocupados = {str(m.ajudante_id) for m in outras if m.ajudante_id}
- 
+
         # Passo 1: Preencher Coroinhas e Acólitos
         for item in funcoes_da_missa:
             if any(str(e.missa_id) == missa.id and e.funcao_atribuida == item['funcao'] for e in escalas): continue
- 
+
             escalados_agora = [e for e in escalas if str(e.missa_id) == missa.id]
-            coroinhas_por_id = {coroinha.id: coroinha for coroinha in coroinhas}
             telefones_na_missa = [coroinhas_por_id[str(e.coroinha_id)].responsavel_telefone for e in escalados_agora if str(e.coroinha_id) in coroinhas_por_id]
- 
+
             candidatos_validos = []
             for candidato in coroinhas:
-                if not candidato.ativo or candidato.tipo != item['exigencia']:
+                if not candidato.ativo:
                     continue
                 if any(str(e.missa_id) == missa.id and str(e.coroinha_id) == candidato.id for e in escalas): continue
- 
-                # NOVO: já escalado em outra missa deste fim de semana
+
+                # já escalado em outra missa deste fim de semana
                 if candidato.id in coroinhas_ocupados: continue
- 
-                if any(str(r.coroinha_id) == candidato.id and r.data_exata == missa.data_hora.date() and r.periodo in [periodo_missa, 'Dia Todo'] for r in restricoes_coroinhas): continue
-                if any(str(r.coroinha_id) == candidato.id and item['funcao'] == r.funcao_proibida for r in restricoes_funcoes): continue
- 
+
+                # mesma regra usada para validar quem já está escalado
+                if motivos_conflito_coroinha(candidato, missa, item['funcao'], funcoes_da_missa, restricoes_coroinhas, restricoes_funcoes): continue
+
                 candidatos_validos.append(candidato)
- 
+
             if candidatos_validos:
                 random.shuffle(candidatos_validos)
                 candidatos_validos.sort(key=lambda c: (not c.responsavel_telefone in telefones_na_missa, sum(1 for escala in escalas if str(escala.coroinha_id) == c.id)))
                 nova_escala = create_record(Escala, coroinha_id=candidatos_validos[0].id, missa_id=missa.id, funcao_atribuida=item['funcao'], status='Confirmado')
                 escalas.append(nova_escala)
- 
+                resultado['preenchidos'] += 1
+
         # Passo 2: Sorteio do Ajudante (Garante pais na mesma missa)
         escalas_finais = [e for e in escalas if str(e.missa_id) == missa.id]
         if escalas_finais and not missa.ajudante_id:
@@ -636,40 +783,54 @@ def preencher_escalas_pendentes():
             for ajud in ajudantes:
                 if not ajud.ativo:
                     continue
-                # NOVO: ajudante já responsável por outra missa deste fim de semana
+                # ajudante já responsável por outra missa deste fim de semana
                 if ajud.id in ajudantes_ocupados: continue
- 
-                if any(str(r.ajudante_id) == ajud.id and r.data_exata == missa.data_hora.date() and r.periodo in [periodo_missa, 'Dia Todo'] for r in restricoes_ajudantes):
+
+                if motivos_conflito_ajudante(ajud, missa, restricoes_ajudantes):
                     continue
                 if any(str(e.missa_id) == missa.id and str(e.ajudante_id) == ajud.id for e in escalas_ajudantes):
                     continue
                 ajudantes_disponiveis.append(ajud)
- 
+
             if ajudantes_disponiveis:
                 ids_na_missa = [str(e.coroinha_id) for e in escalas_finais]
                 # Filtra os ajudantes que tem filhos escalados nesta missa específica
                 pais_na_missa = [a for a in ajudantes_disponiveis if any(str(filho_id) in ids_na_missa for filho_id in a.coroinhas_vinculados_ids)]
- 
+
                 escolhido = random.choice(pais_na_missa) if pais_na_missa else random.choice(ajudantes_disponiveis)
                 missa.ajudante_id = escolhido.id
                 save_record(missa)
                 escalas_ajudantes.append(create_record(EscalaAjudante, ajudante_id=escolhido.id, missa_id=missa.id))
- 
+                resultado['ajudantes_preenchidos'] += 1
+    return resultado
+
+
+def mensagem_do_resultado(resultado):
+    partes = []
+    removidos = resultado['removidos'] + resultado['ajudantes_removidos']
+    preenchidos = resultado['preenchidos'] + resultado['ajudantes_preenchidos']
+    if removidos:
+        partes.append(f'{removidos} escalado(s) em conflito removido(s)')
+    if preenchidos:
+        partes.append(f'{preenchidos} vaga(s) preenchida(s)')
+    if not partes:
+        return 'Nada a gerar: não há conflitos nem vagas que possam ser preenchidas nas missas futuras.'
+    return 'Escala atualizada: ' + ' e '.join(partes) + '.'
+
+
 @app.route('/escala/gerar', methods=['POST'])
 def gerar_escala_automatica():
-    preencher_escalas_pendentes()
+    flash(mensagem_do_resultado(preencher_escalas_pendentes()), 'success')
     return redirect(url_for('escalas'))
 
 @app.route('/escala/regerar/<id>', methods=['POST'])
 def regerar_escala(id):
     missa = get_record(Missa, id)
-    for escala in store.all(Escala, missa_id=id):
-        store.delete(Escala, escala.id)
-    for escala in store.all(EscalaAjudante, missa_id=id):
-        store.delete(EscalaAjudante, escala.id)
-    missa.ajudante_id = None
+    if missa.data_hora < agora_local():
+        abort(400, description='Não é possível refazer a escala de uma missa que já passou.')
+    limpar_escala_da_missa(missa)
     save_record(missa)
-    preencher_escalas_pendentes()
+    flash(mensagem_do_resultado(preencher_escalas_pendentes(missa_ids={missa.id})), 'success')
     return redirect(url_for('escalas'))
 
 @app.route('/escala/deletar/<id>', methods=['POST'])
