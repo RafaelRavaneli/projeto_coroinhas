@@ -427,3 +427,35 @@ def test_paginas_abrem_e_mostram_avisos_no_layout():
     assert 'alert-warning' in pagina
     for url in ('/', '/ajudantes', '/escalas', f'/coroinha/{coroinhas[0]}/restricoes'):
         assert client.get(url).status_code == 200, url
+
+
+# ---------------------------------------------------------------- fuso horário
+def test_agora_local_usa_horario_de_brasilia():
+    from datetime import timezone
+    utc = datetime.now(timezone.utc).replace(tzinfo=None)
+    diferenca = utc - app_module.agora_local()
+    # Brasília fica 3h atrás de UTC (sem horário de verão desde 2019)
+    assert timedelta(hours=2, minutes=59) <= diferenca <= timedelta(hours=3, minutes=1)
+
+
+def test_missa_de_hoje_a_noite_ainda_conta_como_futura(monkeypatch):
+    """No servidor em UTC, 16h de Brasília já são 19h UTC: a missa das 19h não pode virar passada."""
+    c = Cenario()
+    acolitos, coroinhas = c.elenco()
+    hoje_19h = proxima_data(6, hora=19, semanas=0)
+    missa = c.missa_completa(hoje_19h, acolitos + coroinhas)
+    monkeypatch.setattr(app_module, 'agora_local', lambda: hoje_19h - timedelta(hours=3))
+    client = c.cliente()
+
+    pagina = client.get('/escalas').get_data(as_text=True)
+    assert 'Refazer escala' in pagina
+    assert c.post(client, f'/escala/regerar/{missa}').status_code == 302
+
+
+def test_missa_passada_nao_mostra_refazer():
+    c = Cenario()
+    acolitos, coroinhas = c.elenco()
+    c.missa_completa(datetime.now() - timedelta(days=3), acolitos + coroinhas)
+    pagina = c.cliente().get('/escalas').get_data(as_text=True)
+    assert 'Refazer escala' not in pagina
+    assert 'Missa realizada' in pagina

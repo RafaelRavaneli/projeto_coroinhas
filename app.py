@@ -3,6 +3,7 @@ import hmac
 import os
 import secrets
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import re
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
@@ -31,6 +32,15 @@ RestricaoFuncao = 'RestricaoFuncao'
 Missa = 'Missa'
 Escala = 'Escala'
 EscalaAjudante = 'EscalaAjudante'
+
+
+# As missas são gravadas no horário de Brasília (sem fuso). O servidor da Vercel
+# roda em UTC, então "agora" precisa ser calculado no fuso da paróquia.
+FUSO_PAROQUIA = ZoneInfo('America/Sao_Paulo')
+
+
+def agora_local():
+    return datetime.now(FUSO_PAROQUIA).replace(tzinfo=None)
 
 
 def get_record(model, document_id):
@@ -164,7 +174,7 @@ def validated_period():
 
 def avisar_se_data_suspeita(data):
     """Avisa (sem bloquear) quando a restrição cadastrada está no passado ou muito distante."""
-    hoje = datetime.now().date()
+    hoje = agora_local().date()
     if data < hoje:
         flash(f'Atenção: a data {data:%d/%m/%Y} já passou. Confira se o ano está correto.', 'warning')
     elif data > hoje + timedelta(days=183):
@@ -614,7 +624,7 @@ def calcular_conflitos(missas):
     - por_missa_ajudante: {id da Missa: [motivos]} para o ajudante responsável
     Missas passadas são ignoradas: o gerador não mexe nelas.
     """
-    agora = datetime.now()
+    agora = agora_local()
     coroinhas_por_id = {coroinha.id: coroinha for coroinha in store.all(Coroinha)}
     ajudantes_por_id = {ajudante.id: ajudante for ajudante in store.all(Ajudante)}
     escalas = store.all(Escala)
@@ -660,7 +670,7 @@ def escalas():
         'escalas.html', missas=todas_missas, texto_whatsapp=texto_wpp,
         data_inicio=request.args.get('data_inicio'), data_fim=request.args.get('data_fim'),
         conflitos_escalas=conflitos_escalas, conflitos_ajudantes=conflitos_ajudantes,
-        total_conflitos=total_conflitos,
+        total_conflitos=total_conflitos, agora=agora_local(),
     )
 
 def preencher_escalas_pendentes(missa_ids=None):
@@ -676,7 +686,7 @@ def preencher_escalas_pendentes(missa_ids=None):
     fim de semana. Missas passadas nunca são alteradas.
     Devolve contagens para a mensagem ao usuário.
     """
-    agora = datetime.now()
+    agora = agora_local()
     missas = sorted(store.all(Missa), key=lambda missa: missa.data_hora)
     alvo_ids = {str(i) for i in missa_ids} if missa_ids is not None else None
     missas_alvo = [
@@ -816,7 +826,7 @@ def gerar_escala_automatica():
 @app.route('/escala/regerar/<id>', methods=['POST'])
 def regerar_escala(id):
     missa = get_record(Missa, id)
-    if missa.data_hora < datetime.now():
+    if missa.data_hora < agora_local():
         abort(400, description='Não é possível refazer a escala de uma missa que já passou.')
     limpar_escala_da_missa(missa)
     save_record(missa)

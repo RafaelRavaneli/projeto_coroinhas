@@ -135,10 +135,14 @@
 
                 <div class="mass-foot">
                     <span>{{ preenchidas }} de {{ molde|length }} funções</span>
+                    {% if agora is defined and missa.data_hora < agora %}
+                    <span>Missa realizada</span>
+                    {% else %}
                     <form action="{{ url_for('regerar_escala', id=missa.id) }}" method="POST" data-confirm="Refazer a escala de “{{ missa.descricao }}”? Os escalados atuais desta missa serão substituídos.">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="link-btn" data-busy="Refazendo…">{{ icon('refresh', 14) }} <span data-label>Refazer escala</span></button>
                     </form>
+                    {% endif %}
                 </div>
             {% else %}
                 <div class="empty">
