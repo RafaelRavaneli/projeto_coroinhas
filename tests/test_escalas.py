@@ -459,3 +459,75 @@ def test_missa_passada_nao_mostra_refazer():
     pagina = c.cliente().get('/escalas').get_data(as_text=True)
     assert 'Refazer escala' not in pagina
     assert 'Missa realizada' in pagina
+
+
+# ---------------------------------------------------------------- restrição por horário exato
+def test_horario_especifico_bloqueia_8h_mas_libera_10h():
+    c = Cenario()
+    acolitos, coroinhas = c.elenco()
+    domingo_8h = proxima_data(6, hora=8)
+    domingo_10h = domingo_8h.replace(hour=10)
+    m8 = c.missa(domingo_8h)
+    c.restricao(coroinhas[0], domingo_8h, 'Horário', horario='08:00')
+
+    c.gerar()
+    assert coroinhas[0] not in c.ids_escalados(m8)
+
+    # outro cenário, só com a missa das 10h: a mesma restrição não bloqueia
+    c2 = Cenario()
+    acolitos2, coroinhas2 = c2.elenco()
+    m10 = c2.missa(domingo_10h)
+    c2.restricao(coroinhas2[0], domingo_10h, 'Horário', horario='08:00')
+    c2.gerar()
+    assert coroinhas2[0] in c2.ids_escalados(m10)
+
+
+def test_horario_especifico_aparece_como_conflito_com_o_horario():
+    c = Cenario()
+    acolitos, coroinhas = c.elenco()
+    quando = proxima_data(6, hora=8)
+    c.missa_completa(quando, acolitos + coroinhas)
+    c.restricao(coroinhas[1], quando, 'Horário', horario='08:00')
+    pagina = c.cliente().get('/escalas').get_data(as_text=True)
+    assert f'Conflito: restrição às 08h00 em {quando:%d/%m}' in pagina
+
+
+def test_horario_especifico_vale_para_ajudante():
+    c = Cenario()
+    c.elenco()
+    quando = proxima_data(6, hora=8)
+    missa = c.missa(quando)
+    impedido = c.ajudante('Impedido')
+    livre = c.ajudante('Livre')
+    c.restricao_ajudante(impedido, quando, 'Horário', horario='08:00')
+    c.gerar()
+    assert c.ajudante_da_missa(missa) == livre
+
+
+def test_cadastro_de_horario_especifico_grava_horario_e_exige_hora():
+    c = Cenario()
+    coroinha = c.coroinha('Fulano')
+    client = c.cliente()
+    dia = proxima_data(6).strftime('%Y-%m-%d')
+
+    ok = c.post(client, f'/coroinha/{coroinha}/restricao_data/nova', data_exata=dia, periodo='Horário', horario='08:00')
+    assert ok.status_code == 302
+    gravada = next(iter(c.fs.docs('restricoes').values()))
+    assert gravada['periodo'] == 'Horário' and gravada['horario'] == '08:00'
+
+    sem_hora = c.post(client, f'/coroinha/{coroinha}/restricao_data/nova', data_exata=dia, periodo='Horário')
+    assert sem_hora.status_code == 400
+    assert len(c.fs.docs('restricoes')) == 1
+
+    pagina = client.get(f'/coroinha/{coroinha}/restricoes').get_data(as_text=True)
+    assert 'às 08h00' in pagina
+
+
+def test_restricao_antiga_sem_horario_continua_funcionando():
+    c = Cenario()
+    acolitos, coroinhas = c.elenco()
+    quando = proxima_data(6, hora=10)
+    missa = c.missa(quando)
+    c.restricao(coroinhas[0], quando, 'Manhã')  # registro antigo, sem campo horario
+    c.gerar()
+    assert coroinhas[0] not in c.ids_escalados(missa)

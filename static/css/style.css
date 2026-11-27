@@ -373,6 +373,7 @@ details[open] > summary .chev { transform: rotate(180deg); }
 .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 .inline-form { display: flex; gap: 8px; flex-wrap: wrap; }
 .inline-form .input, .inline-form .select { flex: 1; min-width: 140px; width: auto; }
+.inline-form .input-time { flex: 0 1 120px; min-width: 110px; }
 .list { margin: 0; padding: 0; list-style: none; }
 .list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--hairline-soft); }
 .list li form { margin: 0; }

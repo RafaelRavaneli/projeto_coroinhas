@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from '_ui.html' import icon %}
+{% from '_ui.html' import icon, campos_periodo %}
 {% block title %}Restrições · {{ coroinha.nome }}{% endblock %}
 {% set active_nav = 'index' %}
 
@@ -23,24 +23,19 @@
             <span class="badge">{{ horarios|length }}</span>
         </div>
         <div class="card-body">
+            <p class="hint" style="margin:0 0 10px">Use “Só um horário” quando a pessoa não pode numa missa, mas pode em outra do mesmo período (ex.: não pode às 8h, pode às 10h).</p>
             <form action="{{ url_for('nova_restricao_data', id=coroinha.id) }}" method="POST" class="inline-form">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                 <label class="sr-only" for="data_exata">Data</label>
                 <input class="input" type="date" id="data_exata" name="data_exata" required>
-                <label class="sr-only" for="periodo">Período</label>
-                <select class="select" id="periodo" name="periodo" required>
-                    <option value="Dia Todo">Dia todo</option>
-                    <option value="Manhã">Manhã (até 12h)</option>
-                    <option value="Tarde">Tarde (12h às 18h)</option>
-                    <option value="Noite">Noite (a partir das 18h)</option>
-                </select>
+                {{ campos_periodo('rc') }}
                 <button type="submit" class="btn btn-primary">{{ icon('plus') }} Adicionar</button>
             </form>
         </div>
         <ul class="list">
             {% for horario in horarios|sort(attribute='data_exata') %}
             <li>
-                <span><strong class="num">{{ horario.data_exata.strftime('%d/%m/%Y') }}</strong> <span class="muted">· {{ horario.periodo }}</span></span>
+                <span><strong class="num">{{ horario.data_exata.strftime('%d/%m/%Y') }}</strong> <span class="muted">· {{ horario|descricao_restricao }}</span></span>
                 <form action="{{ url_for('deletar_restricao_data', id=horario.id) }}" method="POST" data-confirm="Remover a restrição de {{ horario.data_exata.strftime('%d/%m/%Y') }}?">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="icon-btn danger" aria-label="Remover restrição de {{ horario.data_exata.strftime('%d/%m/%Y') }}">{{ icon('x') }}</button>
@@ -85,4 +80,5 @@
         </ul>
     </section>
 </div>
+<datalist id="horarios-missas">{% for h in horarios_das_missas() %}<option value="{{ h }}"></option>{% endfor %}</datalist>
 {% endblock %}

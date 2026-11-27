@@ -22,3 +22,16 @@
 {%- macro cross(size=14) -%}
 <svg width="{{ size }}" height="{{ (size * 1.15)|round|int }}" viewBox="0 0 14 16" fill="#e6c983" aria-hidden="true"><rect x="6" y="0" width="2" height="16" rx="1"/><rect x="1.5" y="4" width="11" height="2" rx="1"/></svg>
 {%- endmacro -%}
+
+{%- macro campos_periodo(prefixo) -%}
+<label class="sr-only" for="{{ prefixo }}-periodo">Período</label>
+<select class="select" id="{{ prefixo }}-periodo" name="periodo" data-periodo required>
+    <option value="Dia Todo">Dia todo</option>
+    <option value="Manhã">Manhã (até 12h)</option>
+    <option value="Tarde">Tarde (12h às 18h)</option>
+    <option value="Noite">Noite (a partir das 18h)</option>
+    <option value="Horário">Só um horário…</option>
+</select>
+<label class="sr-only" for="{{ prefixo }}-horario">Horário da missa</label>
+<input class="input input-time" type="time" id="{{ prefixo }}-horario" name="horario" list="horarios-missas" step="300" data-horario hidden disabled>
+{%- endmacro -%}

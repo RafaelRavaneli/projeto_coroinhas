@@ -19,12 +19,34 @@ def periodo_da_missa(data_hora):
     return 'Noite'
 
 
+HORARIO_ESPECIFICO = 'Horário'
+
+
+def horario_da_restricao(restricao):
+    """Horário 'HH:MM' de uma restrição do tipo Horário; None nas demais."""
+    return getattr(restricao, 'horario', None)
+
+
+def descricao_restricao(restricao):
+    """Texto curto do período: 'Dia Todo', 'Manhã'... ou 'às 08h00'."""
+    if restricao.periodo == HORARIO_ESPECIFICO:
+        horario = horario_da_restricao(restricao) or '?'
+        return 'às ' + horario.replace(':', 'h')
+    return restricao.periodo
+
+
 def restricao_de_data_bloqueia(restricao, data_hora):
-    """True se a restrição (data exata + período) cobre a missa."""
-    return (
-        restricao.data_exata == data_hora.date()
-        and restricao.periodo in (periodo_da_missa(data_hora), 'Dia Todo')
-    )
+    """True se a restrição (data exata + período ou horário exato) cobre a missa.
+
+    Horário específico bloqueia só a missa que começa naquele horário, no dia;
+    as outras missas do mesmo período continuam liberadas (ex.: não pode às
+    8h, mas pode às 10h).
+    """
+    if restricao.data_exata != data_hora.date():
+        return False
+    if restricao.periodo == HORARIO_ESPECIFICO:
+        return horario_da_restricao(restricao) == data_hora.strftime('%H:%M')
+    return restricao.periodo in (periodo_da_missa(data_hora), 'Dia Todo')
 
 
 def exigencia_da_funcao(molde, funcao):
@@ -52,7 +74,7 @@ def motivos_conflito_coroinha(coroinha, missa, funcao, molde, restricoes_data, r
     coroinha_id = str(coroinha.id)
     for restricao in restricoes_data:
         if str(restricao.coroinha_id) == coroinha_id and restricao_de_data_bloqueia(restricao, missa.data_hora):
-            motivos.append(f'restrição {restricao.periodo} em {missa.data_hora:%d/%m}')
+            motivos.append(f'restrição {descricao_restricao(restricao)} em {missa.data_hora:%d/%m}')
     for restricao in restricoes_funcao:
         if str(restricao.coroinha_id) == coroinha_id and restricao.funcao_proibida == funcao:
             motivos.append('função proibida')
@@ -74,7 +96,7 @@ def motivos_conflito_ajudante(ajudante, missa, restricoes_ajudantes):
         return ['ajudante não encontrado']
     ajudante_id = str(ajudante.id)
     return [
-        f'restrição {restricao.periodo} em {missa.data_hora:%d/%m}'
+        f'restrição {descricao_restricao(restricao)} em {missa.data_hora:%d/%m}'
         for restricao in restricoes_ajudantes
         if str(restricao.ajudante_id) == ajudante_id and restricao_de_data_bloqueia(restricao, missa.data_hora)
     ]

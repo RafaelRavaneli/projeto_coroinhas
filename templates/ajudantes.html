@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% from '_ui.html' import icon %}
+{% from '_ui.html' import icon, campos_periodo %}
 {% block title %}Ajudantes{% endblock %}
 {% block print_title %}Ajudantes e responsáveis · Paróquia Santo Antônio{% endblock %}
 
@@ -148,17 +148,13 @@
             <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
             <label class="sr-only" for="ra-data-{{ ajudante.id }}">Data</label>
             <input class="input" type="date" id="ra-data-{{ ajudante.id }}" name="data_exata" required>
-            <label class="sr-only" for="ra-per-{{ ajudante.id }}">Período</label>
-            <select class="select" id="ra-per-{{ ajudante.id }}" name="periodo" required>
-                <option value="Dia Todo">Dia todo</option><option value="Manhã">Manhã</option>
-                <option value="Tarde">Tarde</option><option value="Noite">Noite</option>
-            </select>
+            {{ campos_periodo('ra-' ~ ajudante.id) }}
             <button type="submit" class="btn btn-primary">{{ icon('plus') }} Adicionar</button>
         </form>
         <ul class="list" style="margin-top:12px">
             {% for r in ajudante.restricoes|sort(attribute='data_exata') %}
             <li>
-                <span><strong class="num">{{ r.data_exata.strftime('%d/%m/%Y') }}</strong> <span class="muted">· {{ r.periodo }}</span></span>
+                <span><strong class="num">{{ r.data_exata.strftime('%d/%m/%Y') }}</strong> <span class="muted">· {{ r|descricao_restricao }}</span></span>
                 <form action="{{ url_for('deletar_restricao_ajudante', id=r.id) }}" method="POST" data-confirm="Remover a indisponibilidade de {{ r.data_exata.strftime('%d/%m/%Y') }}?">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="icon-btn danger" aria-label="Remover indisponibilidade de {{ r.data_exata.strftime('%d/%m/%Y') }}">{{ icon('x') }}</button>
@@ -171,4 +167,5 @@
     </div>
 </dialog>
 {% endfor %}
+<datalist id="horarios-missas">{% for h in horarios_das_missas() %}<option value="{{ h }}"></option>{% endfor %}</datalist>
 {% endblock %}
